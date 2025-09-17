@@ -62,6 +62,10 @@ def parse_int_to_formatted_hex (value):
         hex_value = "00" + str(hex_value)
     elif (hexlen == 3):
         hex_value = "0" + str(hex_value)
+    elif (hexlen == 4):
+        hex_value = hex_value
+    else:
+        print("Sir we have a serious problem here, one hew value is either to short or too long!")
             
     return hex_value
 
@@ -81,7 +85,7 @@ def klodufy (path, size, source_min, source_max, max_resolution):
     voxel_size = (1 - 0) * 1 / size
     for c in range(0, total_size):
         klodu.append(0)
-        
+    
     # Prepare export file
     file_name = "aa-klodu-3D-tex-" + str(size) + "-logsum-001"
     destination_file = open("output/" + file_name + ".asset", "w")
@@ -172,10 +176,11 @@ def klodufy_npy (source_file, size, destination_file_name, max_resolution, round
     write_unity_header(destination_file, destination_file_name, base_size, data_size)
     
     # Testing mode (don't compute all values)
-    testing_step = 10
+    testing_step = 1000
     step = testing_step if testing_mode else 1
     
     # Detect extreme values
+    print("Parsing values while scanning for min & max...")
     min_value = float("inf")
     max_value = float("-inf")
     i = 0
@@ -189,7 +194,6 @@ def klodufy_npy (source_file, size, destination_file_name, max_resolution, round
                     abc = math.log10(data[a][b][c]) if logarithmic_mode else data[a][b][c]
                     abc = round(abc, 2) if rounding_mode else abc
                     data[a][b][c] = abc
-                    # print(abc)
                     
                     if (abc > max_value):
                         max_value = abc
@@ -201,10 +205,6 @@ def klodufy_npy (source_file, size, destination_file_name, max_resolution, round
     
     print("Min value is: " + str(min_value))
     print("Max value is: " + str(max_value))
-    
-    if (max_value == 0):
-        print("Problem captain, MAX VALUE IS ZERO! ABORT! ABORT!")
-        return False
     
     # Normalize so it fits max resolution
     print("Normalizing (over " + str(data.size) + " values), parsing to hex and writing to file...")
@@ -226,15 +226,17 @@ def klodufy_npy (source_file, size, destination_file_name, max_resolution, round
     
     # Generate Unity footer
     write_unity_footer(destination_file)
+    
+    print("File " + destination_file_name + ".asset was created")
 
 # Brownie
 source_file = "./data/brownie_B_field_stack_01863.npy"
 size = 237
 destination_file_name = "klodu-brown-dwarf-237"
-rounding_mode = True
+rounding_mode = False
 logarithmic_mode = False
 testing_mode = False
-# klodufy_npy(source_file, size, destination_file_name, max_resolution, rounding_mode, logarithmic_mode, testing_mode) # Always outputs a 237³ file
+klodufy_npy(source_file, size, destination_file_name, max_resolution, rounding_mode, logarithmic_mode, testing_mode) # Always outputs a 237³ file
 
 # Dustyturb npy cloud
 source_file = "./data/dustyturb_density_reshaped_00524.npy"
@@ -242,23 +244,10 @@ size = 256
 destination_file_name = "klodu-dustyturb-256"
 rounding_mode = False
 logarithmic_mode = True
-testing_mode = True
-klodufy_npy(source_file, size, destination_file_name, max_resolution, rounding_mode, logarithmic_mode, testing_mode)
+testing_mode = False # TO BE FIXEEEEDDDD
+# klodufy_npy(source_file, size, destination_file_name, max_resolution, rounding_mode, logarithmic_mode, testing_mode)
 
 # Dustyturb .dat (later)
 
-# Dustyturb npy tracers
-source_file = "./data/dustyturb_tracers_00524.npy"
-data = np.load(source_file)
-print("Data shape is " + str(data.shape) + " with a total of " + str(data.size) + " elements.")
-print(len(data[:][0]))
-print(data.shape[0])
-for i in range(0, 1000):
-    # print("1054 is " + str(data[i][1054]) + " while 9054 is " + str(data[i][9054]) )
-    x = data[0][i]
-    y = data[1][i]
-    z = data[2][i]
-    
-    print(str(x) + " " + str(y) + " " + str(z))
     
     
