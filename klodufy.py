@@ -1,4 +1,7 @@
-# ANDRIX ® 2025: generate 3D textures for Unity out of pointcloud files
+# ANDRIX ® 2025 🤙
+# 
+# Generate 3D textures for Unity out of pointcloud files
+#
 # Klodu comes from Klodo, the japanese name of Final Fantasy VII character Cloud
 # Source data from CRAL, bifluid by Benoit Commercon, brown dwarf by Adnan Ali Ahmad
 

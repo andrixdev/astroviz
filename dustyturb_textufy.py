@@ -1,9 +1,15 @@
+# ANDRIX x CRAL ® 2025 🤙
+# 
+# Generate text files with tracers data to use in Unity for the creation of 2D textures read by a VFX graph
+#
+# This file reads a .npy array
+
 import numpy as np
 import math
 import random
 
 # Read input tracers file
-def textufy (source_file, destination_file_name):
+def dustyturb_textufy (source_file, destination_file_name):
     data = np.load(source_file)
     print("Data shape is " + str(data.shape) + " with a total of " + str(data.size) + " elements.")
     
@@ -55,6 +61,6 @@ def textufy (source_file, destination_file_name):
     print("Max intensity value: " + str(max_v_value))
 
 source_file = "./data/dustyturb_tracers_00524.npy"
-destination_file_name = "dustyturb-tracers"
+destination_file_name = "dustyturb-tracers-text"
 
-textufy(source_file, destination_file_name)
+# dustyturb_textufy(source_file, destination_file_name)
