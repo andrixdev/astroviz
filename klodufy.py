@@ -5,9 +5,11 @@
 # Klodu comes from Klodo, the japanese name of Final Fantasy VII character Cloud
 # Source data from CRAL, bifluid by Benoit Commercon, brown dwarf by Adnan Ali Ahmad
 
-import numpy as np
 import math
 import random
+import os # for Fortran .dat
+import numpy as np # for .npy & Fortran .dat
+from scipy.io import FortranFile # for Fortran .dat
 
 def remap (input, source_min, source_max, target_min, target_max):
     return target_min + (target_max - target_min) * (input - source_min) / (source_max - source_min)
@@ -75,7 +77,7 @@ def parse_int_to_formatted_hex (value):
 # Count points in pointcloud to create 3D texture (voxel cloud)
 # Final texture coordinates are implict, between [0, 1] [0, 1] [0, 1], sliced into size³ cubes
 # Source coordinates have to be remapped to [0, 1] [0, 1] [0, 1]
-def klodufy (path, size, source_min, source_max, max_resolution):
+def klodufy_txt (path, size, source_min, source_max, max_resolution):
     arr = np.loadtxt(path)
     leng = arr.shape[0]
     total_size = size * size * size
@@ -158,17 +160,37 @@ def klodufy (path, size, source_min, source_max, max_resolution):
     print("Done!")
 
 # Klodufy (voxelize) already cleaned Commerc bifluid file
-source_file_name = "./data/bin1_bifluid_00045_clean3.txt"
+source_file_name = "./data/bifluid_bin1_00045_clean3.txt"
 size = 10
 source_min = 0
 source_max = 4
 max_resolution = 65536 - 1 # 2^16 (intensities exported to 16-bit single-channel 3D-texture, TextureFormat.R16 in Unity)
-# klodufy(source_file_name, size, source_min, source_max, max_resolution)
+# klodufy_txt(source_file_name, size, source_min, source_max, max_resolution)
 
+# file_type_token: "NUMPY" or "DAT"
+def prepare_data_cube (source_file, file_type_token):
+    
+    if (file_type_token == "NUMPY"):
+        data = np.load(source_file)
+        print("Data shape is " + str(data.shape) + " with a total of " + str(data.size) + " elements.")
+        
+        return data
+    elif (file_type_token == "DAT"):
+        f = FortranFile(os.path.expanduser(source_file), 'r')
+        sx, sy, sz = f.read_ints(np.int32) # just the size values
+        data = f.read_reals(np.float32).reshape((sx, sy, sz), order='F')
+        f.close()
+        
+        return data
+    else:
+        print("[prepare_data_cube(...)] Unknown file type token: " + file_type_token)
+        
+        return False
+    
 # Parse .npy cube to Unity 3D texture
-def klodufy_npy (source_file, size, destination_file_name, max_resolution, rounding_mode, logarithmic_mode, testing_mode):
-    data = np.load(source_file)
-    print("Data shape is " + str(data.shape) + " with a total of " + str(data.size) + " elements.")
+def klodufy (source_file, file_type_token, size, destination_file_name, max_resolution, rounding_mode, logarithmic_mode, testing_mode):
+    
+    data = prepare_data_cube(source_file, file_type_token)
     
     # Prepare export file
     destination_file = open("output/" + destination_file_name + ".asset", "w")
@@ -179,7 +201,7 @@ def klodufy_npy (source_file, size, destination_file_name, max_resolution, round
     write_unity_header(destination_file, destination_file_name, base_size, data_size)
     
     # Testing mode (don't compute all values)
-    testing_step = 1000
+    testing_step = 200000
     step = testing_step if testing_mode else 1
     
     # Detect extreme values
@@ -203,8 +225,8 @@ def klodufy_npy (source_file, size, destination_file_name, max_resolution, round
                     if (abc < min_value):
                         min_value = abc
                     
-                    # if (i % testing_step == 0):
-                        # print(str(i) + "th value is: " + str(abc))
+                    if (i % testing_step == 0):
+                        print(str(i) + "th value is: " + str(abc))
     
     print("Min value is: " + str(min_value))
     print("Max value is: " + str(max_value))
@@ -223,9 +245,9 @@ def klodufy_npy (source_file, size, destination_file_name, max_resolution, round
                     hex_value = parse_int_to_formatted_hex(new_value)
                     destination_file.write(str(hex_value))
                     
-                    # Print out some values while waiting...
-                    # if (j % testing_step == 0):
-                        # print(str(j) + "th hexadecimal value is: " + str(hex_value))
+                    # Print out some values on the way...
+                    if (j % testing_step == 0):
+                        print(str(j) + "th hexadecimal value is: " + str(hex_value))
     
     # Generate Unity footer
     write_unity_footer(destination_file)
@@ -234,23 +256,67 @@ def klodufy_npy (source_file, size, destination_file_name, max_resolution, round
 
 # Brownie
 source_file = "./data/brownie_B_field_stack_01863.npy"
+file_type_token = "NUMPY"
 size = 237
 destination_file_name = "klodu-brown-dwarf-237"
 rounding_mode = False
 logarithmic_mode = False
-testing_mode = False
-klodufy_npy(source_file, size, destination_file_name, max_resolution, rounding_mode, logarithmic_mode, testing_mode) # Always outputs a 237³ file
+testing_mode = True
+# klodufy(source_file, file_type_token, size, destination_file_name, max_resolution, rounding_mode, logarithmic_mode, testing_mode) # Always outputs a 237³ file
 
-# Dustyturb npy cloud
+# Dustyturb npy cloud (density)
 source_file = "./data/dustyturb_density_reshaped_00524.npy"
+file_type_token = "NUMPY"
 size = 256
-destination_file_name = "klodu-dustyturb-256"
 rounding_mode = False
-logarithmic_mode = True
-testing_mode = False # TO BE FIXEEEEDDDD
-# klodufy_npy(source_file, size, destination_file_name, max_resolution, rounding_mode, logarithmic_mode, testing_mode)
+logarithmic_mode = False
+testing_mode = False # TO BE FIXED
+destination_file_name = "klodu-dustyturb-256-density" + ("-log" if logarithmic_mode else "")
+# klodufy(source_file, file_type_token, size, destination_file_name, max_resolution, rounding_mode, logarithmic_mode, testing_mode)
+
+# Dustyturb npy cloud (vx)
+source_file = "./data/dustyturb_vx_reshaped_00524.npy"
+file_type_token = "NUMPY"
+size = 256
+rounding_mode = False
+logarithmic_mode = False
+testing_mode = False # TO BE FIXED
+destination_file_name = "klodu-dustyturb-256-vx" + ("-log" if logarithmic_mode else "")
+# klodufy(source_file, file_type_token, size, destination_file_name, max_resolution, rounding_mode, logarithmic_mode, testing_mode)
+
+# Dustyturb npy cloud (vy)
+source_file = "./data/dustyturb_vy_reshaped_00524.npy"
+file_type_token = "NUMPY"
+size = 256
+rounding_mode = False
+logarithmic_mode = False
+testing_mode = False # TO BE FIXED
+destination_file_name = "klodu-dustyturb-256-vy" + ("-log" if logarithmic_mode else "")
+# klodufy(source_file, file_type_token, size, destination_file_name, max_resolution, rounding_mode, logarithmic_mode, testing_mode)
+
+# Dustyturb npy cloud (vz)
+source_file = "./data/dustyturb_vz_reshaped_00524.npy"
+file_type_token = "NUMPY"
+size = 256
+rounding_mode = False
+logarithmic_mode = False
+testing_mode = False # TO BE FIXED
+destination_file_name = "klodu-dustyturb-256-vz" + ("-log" if logarithmic_mode else "")
+# klodufy(source_file, file_type_token, size, destination_file_name, max_resolution, rounding_mode, logarithmic_mode, testing_mode)
+
 
 # Dustyturb .dat (later)
 
-    
-    
+
+
+
+
+# Giantclouds .dat
+source_file = "./data/giantclouds_00201_cube.dat"
+file_type_token = "DAT"
+size = 256
+rounding_mode = False
+logarithmic_mode = False
+testing_mode = False
+destination_file_name = "klodu-giantclouds-00201-256-density" + ("-log" if logarithmic_mode else "")
+klodufy(source_file, file_type_token, size, destination_file_name, max_resolution, rounding_mode, logarithmic_mode, testing_mode)

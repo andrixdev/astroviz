@@ -68,12 +68,6 @@ destination_file_name = "binarydisk-tracers-text"
 
 # binarydisk_textufy(source_file, destination_file_name)
 
-# sdf, sdf_sinks = sarracen.read_phantom(source_file)
-# print(sdf_sinks.describe())
-# Note: sdf_sinks has only 2 rows... with various columns other than xyz, maybe the 2 stars are sink particles?
-
-
-
 def binarydisk_full_textufy (source_file, destination_file_name):
     sdf, sdf_sinks = sarracen.read_phantom(source_file)
     print(sdf.describe())
@@ -160,26 +154,31 @@ destination_file_name = "binarydisk-tracers-full-text"
 # binarydisk_full_textufy(source_file, destination_file_name)
 
 
-sdf, sdf_sinks = sarracen.read_phantom(source_file)
-print(sdf_sinks.describe())
-x1 = sdf_sinks.iloc[0]["x"]
-y1 = sdf_sinks.iloc[0]["y"]
-z1 = sdf_sinks.iloc[0]["z"]
-x2 = sdf_sinks.iloc[1]["x"]
-y2 = sdf_sinks.iloc[1]["y"]
-z2 = sdf_sinks.iloc[1]["z"]
-print(str(x1) + " " + str(y1) + " " + str(z1))
-print(str(x2) + " " + str(y2) + " " + str(z2))
+# Checking the 2 rows of star data (the 2 binary stars are the sink particles!)
 
-def remap (input, source_min, source_max, target_min, target_max):
-    return target_min + (target_max - target_min) * (input - source_min) / (source_max - source_min)
+def check_sinks():
+    sdf, sdf_sinks = sarracen.read_phantom(source_file)
+    print(sdf_sinks.describe())
+    x1 = sdf_sinks.iloc[0]["x"]
+    y1 = sdf_sinks.iloc[0]["y"]
+    z1 = sdf_sinks.iloc[0]["z"]
+    x2 = sdf_sinks.iloc[1]["x"]
+    y2 = sdf_sinks.iloc[1]["y"]
+    z2 = sdf_sinks.iloc[1]["z"]
+    print(str(x1) + " " + str(y1) + " " + str(z1))
+    print(str(x2) + " " + str(y2) + " " + str(z2))
 
-x1 = remap(x1, -5600, 5600, 0, 1)
-y1 = remap(y1, -5600, 5600, 0, 1)
-z1 = remap(z1, -5600, 5600, 0, 1)
-x2 = remap(x2, -5600, 5600, 0, 1)
-y2 = remap(y2, -5600, 5600, 0, 1)
-z2 = remap(z2, -5600, 5600, 0, 1)
-print("Remapped...")
-print(str(x1) + " " + str(y1) + " " + str(z1))
-print(str(x2) + " " + str(y2) + " " + str(z2))
+    def remap (input, source_min, source_max, target_min, target_max):
+        return target_min + (target_max - target_min) * (input - source_min) / (source_max - source_min)
+
+    x1 = remap(x1, -5600, 5600, 0, 1)
+    y1 = remap(y1, -5600, 5600, 0, 1)
+    z1 = remap(z1, -5600, 5600, 0, 1)
+    x2 = remap(x2, -5600, 5600, 0, 1)
+    y2 = remap(y2, -5600, 5600, 0, 1)
+    z2 = remap(z2, -5600, 5600, 0, 1)
+    print("Remapped...")
+    print(str(x1) + " " + str(y1) + " " + str(z1))
+    print(str(x2) + " " + str(y2) + " " + str(z2))
+    
+check_sinks()

@@ -6,7 +6,7 @@
 
 import sarracen
 
-source_file = "./data/disktilt_dump_0314.sham"
+source_file = "./data/disktilt_dump_0098.sham"
 sdf = sarracen.read_shamrock(source_file)
 
 print(sdf.describe())
