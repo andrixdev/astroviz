@@ -20,7 +20,7 @@ def binarydisk_textufy (source_file, destination_file_name):
     max_h_value = float("-inf")
     count = sdf.shape[0]
     
-    print("Writing values to " + destination_file_name + ".txt...")
+    print("Writing " + count + " text rows to " + destination_file_name + ".txt...")
     for i in range(0, count):
         x = sdf.iloc[i]["x"]
         y = sdf.iloc[i]["y"]
@@ -56,7 +56,7 @@ def binarydisk_textufy (source_file, destination_file_name):
             print(str(i) + "th row is: " + row)
         
         destination_file.write(row)
-        
+    
     # Output extrema
     print("Min position value: " + str(min_pos_value))
     print("Max position value: " + str(max_pos_value))
@@ -85,7 +85,7 @@ def binarydisk_full_textufy (source_file, destination_file_name):
     
     count = sdf.shape[0]
     
-    print("Writing values to " + destination_file_name + ".txt...")
+    print("Writing " + str(count) + " text rows to " + destination_file_name + ".txt...")
     for i in range(0, count):
         x = sdf.iloc[i]["x"]
         y = sdf.iloc[i]["y"]

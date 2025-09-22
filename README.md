@@ -1,10 +1,14 @@
 # Astroviz
 
-A python script to generate 3D textures for Unity out of various astrophysics data formats
+Python scripts to generate 2D and 3D textures for Unity out of various astrophysics data formats  
+
+**klodufy.py** creates 3D textures for Unity out of cube density maps (voxel clouds)  
+**sph_textufy.py** creates text files with rows of data for Unity to transform into 2D textures  
 
 ## Usage
 
 - Install Python and run something like `py klodufy.py` or `python klodufy.py` depending on your main Python CLI call.  
-- Edit file according to your needs. The *data* directory contains sources, while *output* contains your exported text files.  
+- The *data* directory contains sources, while *output* contains your exported text files.  
 - The *data* directory is left empty, for you to fill it with relevant data files.  
-- Adapt the script by commenting or uncommenting revelant code sections.
+- Adapt the script by commenting or uncommenting revelant code sections.  
+- Edit file according to your needs.   
