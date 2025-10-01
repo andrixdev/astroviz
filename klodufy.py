@@ -1,6 +1,6 @@
 # ANDRIX ® 2025 🤙
 # 
-# Generate 3D textures for Unity out of voxel cubes or pointcloud files
+# Generate 3D textures for Unity out of voxel cubes, sph tracers or pointcloud files
 #
 # Klodu comes from Klodo, the japanese name of Final Fantasy VII character Cloud
 # Source data from CRAL - Centre de Recherche Astrophysique de Lyon
@@ -87,11 +87,11 @@ def parse_int_to_formatted_hex (value):
 def round_to_n(x, n):
     return round(x, -int(math.floor(round(math.log10(abs(x)) - n + 1))))
 
-
 # Count points in pointcloud to create 3D texture (voxel cloud)
 # Final texture coordinates are implict, between [0, 1] [0, 1] [0, 1], sliced into size³ cubes
 # Source coordinates have to be remapped to [0, 1] [0, 1] [0, 1]
-def klodufy_txt (path, size, source_min, source_max, max_resolution):
+# testing_density currently doesn't work (default value of 1)
+def klodufy_txt (path, size, source_min, source_max, testing_density):
     arr = np.loadtxt(path)
     leng = arr.shape[0]
     total_size = size * size * size
@@ -111,8 +111,8 @@ def klodufy_txt (path, size, source_min, source_max, max_resolution):
     
     # Generate Unity header
     base_size = size
-    data_size = 2 * base_size * base_size * base_size
-    write_unity_header(destination_file, file_name, base_size, data_size)
+    dimensionality = 1
+    write_unity_header(destination_file, file_name, base_size, testing_density, dimensionality)
     
     # Set max resolution for hex values
     max_resolution = 65536 - 1 # 2^16, starts at 0
@@ -177,11 +177,15 @@ def klodufy_txt (path, size, source_min, source_max, max_resolution):
     print("Done!")
 
 # Klodufy (voxelize) already cleaned Commerc bifluid file
-source_file_name = "./data/bifluid_bin1_00045_clean3.txt"
-size = 10
-source_min = 0
-source_max = 4
-# klodufy_txt(source_file_name, size, source_min, source_max)
+def klodufy_txt_bifluid ():
+    source_file_name = "./data/bifluid_bin1_00045_clean3.txt"
+    size = 10
+    source_min = 0
+    source_max = 4
+    testing_density = 1/1 # Doesn't work yet
+    klodufy_txt(source_file_name, size, source_min, source_max, testing_density)
+
+# klodufy_txt_bifluid()
 
 # file_type_token: "NUMPY" or "DAT"
 def prepare_data_cube (source_file, file_type_token):
@@ -221,7 +225,7 @@ def klodufy (source_file, file_type_token, size, dimensionality, destination_fil
     
     # Hello
     destination_file_name = destination_file_name + ("" if testing_value == 1 else ("-1-in-" + str(testing_value)))
-    destination_file_name = destination_file_name + ("-log" if logarithmic_mode else "") 
+    destination_file_name = destination_file_name + ("-log" if logarithmic_mode else "")
     print("Starting work on " + destination_file_name + "...")
     print("type: " + file_type_token + ", size: " + str(size) + ", dimensionality: " + str(dimensionality) + ", rounding mode " + ("on" if rounding_mode else "off") + ", logarithmic mode " + ("on" if logarithmic_mode else "off") + ", testing density: 1 in " + str(testing_value) + "³ == 1 in " + str(testing_value ** 3) + ", number of logs: " + str(nb_logs))
     
@@ -246,10 +250,12 @@ def klodufy (source_file, file_type_token, size, dimensionality, destination_fil
     # LOOP 1: detect extreme values, maybe round or logify
     log_ratio = "all of " if testing_value == 1 else ("1 in " + str(testing_value ** 3) + " of all ")
     print("Parsing " + log_ratio +  str(base_count) + " (== " + str(actual_count) + ") rows while scanning for min & max...")
-    min_value = float("inf")
-    max_value = float("-inf")
+    
+    real_min_value = float("inf")
+    real_max_value = float("-inf")
+    
     i = 0
-    nb_logs = nb_logs + 1
+    logs_count = 0
     x_range = math.floor(data.shape[0] * testing_density)
     y_range = math.floor(data.shape[1] * testing_density)
     z_range = math.floor(data.shape[2] * testing_density)
@@ -258,7 +264,7 @@ def klodufy (source_file, file_type_token, size, dimensionality, destination_fil
     for a in range(0, x_range):
         for b in range(0, x_range):
             for c in range(0, z_range):
-                i += step
+                i += 1
                 aa = a * step
                 bb = b * step
                 cc = c * step
@@ -273,12 +279,13 @@ def klodufy (source_file, file_type_token, size, dimensionality, destination_fil
                         
                     data[aa][bb][cc] = v
                     
-                    if (v > max_value):
-                        max_value = v
-                    if (v < min_value):
-                        min_value = v
+                    if (v > real_max_value):
+                        real_max_value = v
+                    if (v < real_min_value):
+                        real_min_value = v
                     
-                    if (i % max(1, int(round(actual_count/nb_logs))) == 0):
+                    if ((i / actual_count) > (logs_count / nb_logs)):
+                        logs_count += 1
                         print(str(i) + "th value is: " + str(v))
                         
                 else: # 3 dim
@@ -292,31 +299,32 @@ def klodufy (source_file, file_type_token, size, dimensionality, destination_fil
                         vz = math.log10(vz)
                         
                     if (rounding_mode):
-                        vx = round(vx, 2)
-                        vy = round(vy, 2)
-                        vz = round(vz, 2)
+                        vx = round_to_n(vx, 3)
+                        vy = round_to_n(vy, 3)
+                        vz = round_to_n(vz, 3)
                         
-                    if (vx > max_value):
-                        max_value = vx
-                    if (vx < min_value):
-                        min_value = vx
-                    if (vy > max_value):
-                        max_value = vy
-                    if (vy < min_value):
-                        min_value = vy
-                    if (vz > max_value):
-                        max_value = vz
-                    if (vz < min_value):
-                        min_value = vz
+                    if (vx > real_max_value):
+                        real_max_value = vx
+                    if (vx < real_min_value):
+                        real_min_value = vx
+                    if (vy > real_max_value):
+                        real_max_value = vy
+                    if (vy < real_min_value):
+                        real_min_value = vy
+                    if (vz > real_max_value):
+                        real_max_value = vz
+                    if (vz < real_min_value):
+                        real_min_value = vz
                         
-                    if (i % max(1, int(round(actual_count/nb_logs))) == 0):
+                    if ((i / actual_count) > (logs_count / nb_logs)):
+                        logs_count += 1
                         log_msg = str(vx) + " " + str(vy) + " " + str(vz)
                         print(str(i) + "th row values are: " + log_msg)
 
     # Log computed metrics
     plural = "s" if dimensionality > 1 else ""
-    print("Min value is: " + str(min_value) + " (" + str(dimensionality) + " dimension" + plural + ")")
-    print("Max value is: " + str(max_value) + " (" + str(dimensionality) + " dimension" + plural + ")")
+    print("Min value is: " + str(real_min_value) + " (" + str(dimensionality) + " dimension" + plural + ")")
+    print("Max value is: " + str(real_max_value) + " (" + str(dimensionality) + " dimension" + plural + ")")
     
     # Log scanning time
     mid_time = datetime.datetime.now()
@@ -327,10 +335,11 @@ def klodufy (source_file, file_type_token, size, dimensionality, destination_fil
     print("Normalizing " + log_ratio + str(data.size) + " (== " + str(actual_count) + ") values, parsing to hex and writing to file...")
     print("Using min_val of " + str(min_val) + ", max_val of " + str(max_val) + " and max_rez of " + str(max_rez))
     j = 0
+    logs_count = 0
     for a in range(0, x_range):
         for b in range(0, x_range):
             for c in range(0, z_range):
-                j += step
+                j += 1
                 aa = a * step
                 bb = b * step
                 cc = c * step
@@ -342,7 +351,8 @@ def klodufy (source_file, file_type_token, size, dimensionality, destination_fil
                     
                     destination_file.write(str(hex_value))
                     
-                    if (j % max(1, int(round(actual_count/nb_logs))) == 0):
+                    if ((j / actual_count) > (logs_count / nb_logs)):
+                        logs_count += 1
                         print(str(j) + "th hexadecimal value is: " + str(hex_value))
                         
                 else: # 3 dim
@@ -354,11 +364,12 @@ def klodufy (source_file, file_type_token, size, dimensionality, destination_fil
                     hex_vy = parse_int_to_formatted_hex(new_vy)
                     hex_vz = parse_int_to_formatted_hex(new_vz)
                     
-                    hex_rgb = str(hex_vx) + str(hex_vy + str(hex_vz))
+                    hex_rgb = str(hex_vx) + str(hex_vy) + str(hex_vz)
                     
                     destination_file.write(hex_rgb)
                     
-                    if (j % max(1, int(round(actual_count/nb_logs))) == 0):
+                    if ((j / actual_count) > (logs_count / nb_logs)):
+                        logs_count += 1
                         print(str(j) + "th hexadecimal triplet is: " + str(hex_rgb))
 
     # Log normalizing time
@@ -372,122 +383,487 @@ def klodufy (source_file, file_type_token, size, dimensionality, destination_fil
     # Conclude
     print("File " + destination_file_name + ".asset was created")
 
-# Brownie B intensity
-source_file = "./data/brownie_B_field_stack_01863.npy"
-file_type_token = "NUMPY"
-size = 237
-dimensionality = 1
-destination_file_name = "klodu-brown-dwarf-237"
-rounding_mode = False
-logarithmic_mode = False
-testing_density = 1/1 # 1/1 is full rendering
-nb_logs = 10
-min_val = 0
-max_val = 10000
-max_rez = 255
-# klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+def klodufy_brownie_B_intensity ():
+    source_file = "./data/brownie_B_field_stack_01863.npy"
+    file_type_token = "NUMPY"
+    size = 237
+    dimensionality = 1
+    destination_file_name = "klodu-brown-dwarf-237"
+    rounding_mode = False
+    logarithmic_mode = False
+    testing_density = 1/101 # 1/1 is full rendering
+    nb_logs = 10
+    min_val = 0
+    max_val = 10000
+    max_rez = 255
+    klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+    
+# klodufy_brownie_B_intensity()
 
-# Brownie B lines
-source_file = "./data/brownie_B_field_vector_stack_01863.npy"
-file_type_token = "NUMPY"
-size = 475
-dimensionality = 3
-rounding_mode = False
-logarithmic_mode = False
-testing_density = 1/1 # 1/1 is full rendering
-nb_logs = 10
-min_val = -10000
-max_val = 10000
-max_rez = 255
-destination_file_name = "klodu-brown-dwarf-B-vectors-475"
-# klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+def klodufy_brownie_B_vectors ():
+    source_file = "./data/brownie_B_field_vector_stack_01863.npy"
+    file_type_token = "NUMPY"
+    size = 475
+    dimensionality = 3
+    rounding_mode = False
+    logarithmic_mode = False
+    testing_density = 1/15 # 1/1 is full rendering
+    nb_logs = 15
+    min_val = -10000
+    max_val = 10000
+    max_rez = 255
+    destination_file_name = "klodu-brown-dwarf-B-vectors-475"
+    klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+    
+# klodufy_brownie_B_vectors()
 
-# Dustyturb npy cloud (density)
-source_file = "./data/dustyturb_density_reshaped_00524.npy"
-file_type_token = "NUMPY"
-size = 256
-dimensionality = 1
-rounding_mode = False
-logarithmic_mode = False
-testing_density = 1/3 # 1/1 is full rendering
-nb_logs = 8
-min_val = 0
-max_val = 1E-18
-max_rez = 255
-destination_file_name = "klodu-dustyturb-256-density"
-# klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+def klodufy_dustyturb_density_numpy (): # Buggy or disordered outputs
+    source_file = "./data/dustyturb_density_reshaped_00524.npy"
+    file_type_token = "NUMPY"
+    size = 256
+    dimensionality = 1
+    rounding_mode = False
+    logarithmic_mode = False
+    testing_density = 1/37 # 1/1 is full rendering
+    nb_logs = 8
+    min_val = 0
+    max_val = 1E-18
+    max_rez = 255
+    destination_file_name = "klodu-dustyturb-256-density"
+    klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
 
-# Dustyturb dat cloud (density)
-source_file = "./data/dustyturb_data.dat"
-file_type_token = "DAT"
-size = 256
-dimensionality = 1
-rounding_mode = False
-logarithmic_mode = False
-testing_density = 1/1 # 1/1 is full rendering
-nb_logs = 8
-min_val = 0
-max_val = 50000
-max_rez = 255
-destination_file_name = "klodu-dustyturb-256-density"
-# klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+# klodufy_dustyturb_density_numpy()
 
-# Giantclouds 00185 rho
-source_file = "./data/giantclouds_00185_rho.dat"
-file_type_token = "DAT"
-size = 256
-dimensionality = 1
-rounding_mode = False
-logarithmic_mode = True
-testing_density = 1/5 # 1/1 is full rendering
-nb_logs = 10
-destination_file_name = "klodu-giantclouds-00185-256-rho"
-min_val = -3
-max_val = 3
-max_rez = 255
-# klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+def klodufy_dustyturb_density ():
+    source_file = "./data/dustyturb_data.dat"
+    file_type_token = "DAT"
+    size = 256
+    dimensionality = 1
+    rounding_mode = False
+    logarithmic_mode = False
+    testing_density = 1/19 # 1/1 is full rendering
+    nb_logs = 8
+    min_val = 0
+    max_val = 50000
+    max_rez = 255
+    destination_file_name = "klodu-dustyturb-256-density"
+    klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
 
-# Giantclouds 00185 rhovx
-source_file = "./data/giantclouds_00185_rhovz.dat"
-file_type_token = "DAT"
-size = 256
-dimensionality = 1
-rounding_mode = False
-logarithmic_mode = False
-testing_density = 1/1 # 1/1 is full rendering
-nb_logs = 10
-destination_file_name = "klodu-giantclouds-00185-256-rhovz"
-min_val = -3000
-max_val = 3000
-max_rez = 255
-# klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+# klodufy_dustyturb_density()
 
-# Tidalstrip .map (same as Giantcloud .dat under the hood)
-source_file = "./data/tidalstrip_00236_density.map"
-file_type_token = "DAT"
-size = 512
-dimensionality = 1
-rounding_mode = False
-logarithmic_mode = True
-testing_density = 1/2 # 1/1 is full rendering
-nb_logs = 10
-min_val = 1
-max_val = 10
-max_rez = 255
-destination_file_name = "klodu-tidalstrip-00236-512-density"
-klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+def klodufy_giantclouds_rho ():
+    source_file = "./data/giantclouds_00185_rho.dat"
+    file_type_token = "DAT"
+    size = 256
+    dimensionality = 1
+    rounding_mode = False
+    logarithmic_mode = True
+    testing_density = 1/65 # 1/1 is full rendering
+    nb_logs = 2
+    destination_file_name = "klodu-giantclouds-00185-256-rho"
+    min_val = -3
+    max_val = 3
+    max_rez = 255
+    klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
 
-# Tidalstrip vx
-source_file = "./data/tidalstrip_00236_vz.dat"
-file_type_token = "DAT"
-size = 512
-dimensionality = 1
-rounding_mode = False
-logarithmic_mode = False
-testing_density = 1/10 # 1/1 is full rendering
-nb_logs = 10
-min_val = -5
-max_val = 5
-max_rez = 255
-destination_file_name = "klodu-tidalstrip-00236-512-vz"
-# klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+# klodufy_giantclouds_rho()
+
+def klodufy_giantclouds_rhovx ():
+    source_file = "./data/giantclouds_00185_rhovz.dat"
+    file_type_token = "DAT"
+    size = 256
+    dimensionality = 1
+    rounding_mode = False
+    logarithmic_mode = False
+    testing_density = 1/29 # 1/1 is full rendering
+    nb_logs = 3
+    destination_file_name = "klodu-giantclouds-00185-256-rhovz"
+    min_val = -3000
+    max_val = 3000
+    max_rez = 255
+    klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+    
+# klodufy_giantclouds_rhovx()
+
+def klodufy_tidalstrip_density ():
+    source_file = "./data/tidalstrip_00236_density.map" # Tidalstrip .map (same as Giantcloud .dat under the hood)
+    file_type_token = "DAT"
+    size = 512
+    dimensionality = 1
+    rounding_mode = False
+    logarithmic_mode = True
+    testing_density = 1/17 # 1/1 is full rendering
+    nb_logs = 8
+    min_val = 1
+    max_val = 10
+    max_rez = 255
+    destination_file_name = "klodu-tidalstrip-00236-512-density"
+    klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+    
+# klodufy_tidalstrip_density()
+
+def klodufy_tidalstrip_vx ():
+    source_file = "./data/tidalstrip_00236_vz.dat"
+    file_type_token = "DAT"
+    size = 512
+    dimensionality = 1
+    rounding_mode = False
+    logarithmic_mode = False
+    testing_density = 1/13 # 1/1 is full rendering
+    nb_logs = 10
+    min_val = -5
+    max_val = 5
+    max_rez = 255
+    destination_file_name = "klodu-tidalstrip-00236-512-vz"
+    klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+
+# klodufy_tidalstrip_vx()
+
+def klodufy_outflow (source_file, file_type_token, variables_index, size, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3):
+    # variables_index == 1 -> x, y, z
+    # variables_index == 2 -> vx, vy, vz
+    # variables_index == 3 -> Bx, By, Bz
+    # variables_index == 4 -> rho, cr, ⌀
+
+    dimensionality = 3
+    
+    # Testing mode inits
+    testing_density = min(1, testing_density) # Make sure it don't go krazy (> 1)
+    testing_value = round(1/testing_density)
+    
+    # Hello
+    destination_file_name = destination_file_name + ("" if testing_value == 1 else ("-1-in-" + str(testing_value)))
+    destination_file_name = destination_file_name + ("-log" if logarithmic_mode else "")
+    print("Starting work on " + destination_file_name + "...")
+    print("variables_index: " + str(variables_index) + ", file_type_token: " + file_type_token + ", size: " + str(size) + ", rounding mode " + ("on" if rounding_mode else "off") + ", logarithmic mode " + ("on" if logarithmic_mode else "off") + ", testing density: 1 in " + str(testing_value) + ", number of logs: " + str(nb_logs))
+    
+    # Load data cube
+    data = prepare_data_cube(source_file, file_type_token)
+    
+    # Prepare export file
+    destination_file = open("output/" + destination_file_name + ".asset", "w")
+    
+    # Generate Unity header
+    base_size = int(math.floor(data.shape[1] ** (1/3)))
+    base_count = base_size * base_size * base_size
+    actual_count = math.floor(base_count * testing_density)
+    write_unity_header(destination_file, destination_file_name, base_size, testing_density, dimensionality)
+    
+    # Track time taken
+    start_time = datetime.datetime.now()
+    
+    # LOOP 1: detect extreme values, maybe round or logify
+    log_ratio = "all of " if testing_value == 1 else ("1 in " + str(testing_value) + " of all ")
+    print("Parsing " + log_ratio + str(base_count) + " (== " + str(actual_count) + ") values while scanning for min & max...")
+    
+    real_min_v1 = float("inf")
+    real_max_v1 = float("-inf")
+    real_min_v2 = float("inf")
+    real_max_v2 = float("-inf")
+    real_min_v3 = float("inf")
+    real_max_v3 = float("-inf")
+    
+    logs_count = 0
+    for_range = math.floor(base_count * testing_density)
+    step = math.floor(base_count / for_range)
+    v1_index = 3 * (variables_index - 1) + 0
+    v2_index = 3 * (variables_index - 1) + 1
+    v3_index = 3 * (variables_index - 1) + 2
+    
+    for i in range(0, for_range):
+        ii = i * step
+        v1 = 0
+        v2 = 0
+        v3 = 0
+        
+        # Get the right variables (x y z, vx vy vz, Bx By Bz, or cr rho ⌀)
+        v1 = data[v1_index][ii]
+        if (v2_index < 11):
+            v2 = data[v2_index][ii]
+        if (v3_index < 11):
+            v3 = data[v3_index][ii]
+            
+        if (logarithmic_mode):
+            v1 = math.log10(max(1E-30, v1))
+            v2 = math.log10(max(1E-30, v2))
+            v3 = math.log10(max(1E-30, v3))
+            
+        if (rounding_mode):
+            v1 = round_to_n(v1, 3)
+            v2 = round_to_n(v2, 3)
+            v3 = round_to_n(v3, 3)
+            
+        if (v1 > real_max_v1):
+            real_max_v1 = v1
+        if (v1 < real_min_v1):
+            real_min_v1 = v1
+        if (v2 > real_max_v2):
+            real_max_v2 = v2
+        if (v2 < real_min_v2):
+            real_min_v2 = v2
+        if (v3 > real_max_v3):
+            real_max_v3 = v3
+        if (v3 < real_min_v3):
+            real_min_v3 = v3
+            
+        if ((i / actual_count) > (logs_count / nb_logs)):
+            logs_count += 1
+            log_msg = str(v1) + " " + str(v2) + " " + str(v3)
+            print(str(i) + "th row values are: " + log_msg)
+                        
+    # Log computed metrics
+    print("Data min values are: " + str(real_min_v1) + " " + str(real_min_v2) + " " + str(real_min_v3))
+    print("Data max values are: " + str(real_max_v1) + " " + str(real_max_v2) + " " + str(real_max_v3))
+    
+    # Log scanning time
+    mid_time = datetime.datetime.now()
+    delta = mid_time.timestamp() - start_time.timestamp()
+    print("Scanned and mapped data in: " + str(round(delta, 2)) + " seconds.")
+    
+    # LOOP 2: normalize so it fits max resolution
+    max_rez = 255
+    print("Normalizing " + log_ratio + str(base_count) + " (== " + str(actual_count) + ") values, parsing to hex and writing to file...")
+    print("Using mins of " + str(min_v1) + " " + str(min_v2) + " " + str(min_v3) + " & maxs of " + str(max_v1) + " " + str(max_v2) + " " + str(max_v3) + " with max_rez of " + str(max_rez))
+    
+    logs_count = 0
+    for j in range(0, for_range):
+        jj = j * step
+        v1 = 0
+        v2 = 0
+        v3 = 0
+        
+        # Get the right variables (x y z, vx vy vz, Bx By Bz, or cr rho ⌀)
+        v1 = data[v1_index][jj]
+        if (v2_index < 11):
+            v2 = data[v2_index][jj]
+        if (v3_index < 11):
+            v3 = data[v3_index][jj]
+            
+        if (logarithmic_mode):
+            v1 = math.log10(max(1E-30, v1))
+            v2 = math.log10(max(1E-30, v2))
+            v3 = math.log10(max(1E-30, v3))
+            
+        if (rounding_mode):
+            v1 = round_to_n(v1, 6)
+            v2 = round_to_n(v2, 6)
+            v3 = round_to_n(v3, 6)
+            
+        new_v1 = round(remap(v1, min_v1, max_v1, 0, max_rez, True))
+        new_v2 = round(remap(v2, min_v2, max_v2, 0, max_rez, True))
+        new_v3 = round(remap(v3, min_v3, max_v3, 0, max_rez, True))
+        
+        hex_v1 = parse_int_to_formatted_hex(new_v1)
+        hex_v2 = parse_int_to_formatted_hex(new_v2)
+        hex_v3 = parse_int_to_formatted_hex(new_v3)
+        
+        hex_rgb = str(hex_v1) + str(hex_v2) + str(hex_v3)
+        
+        destination_file.write(hex_rgb)
+        
+        if ((j / actual_count) > (logs_count / nb_logs)):
+            logs_count += 1
+            print(str(j) + "th hexadecimal value is: " + str(hex_rgb))
+    
+    # Log normalizing time
+    end_time = datetime.datetime.now()
+    delta = end_time.timestamp() - mid_time.timestamp()
+    print("Normalized data in: " + str(round(delta, 2)) + " seconds.")
+    
+    # Generate Unity footer
+    write_unity_footer(destination_file)
+    
+    # Conclude
+    print("File " + destination_file_name + ".asset was created")
+
+def klodufy_outflow_values (zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode):
+    file_type_token = "NUMPY"
+    size = 256
+    rounding_mode = False
+    testing_density = 1/26 # 1/1 is full rendering
+    nb_logs = 5
+    source_file = "./data/outflow_1M_isolated_collapse_" + str(zoom) + "AU.npy"
+    destination_file_name = "klodu-outflow-" +  str(zoom) + "-var" + str(variables_index)
+    klodufy_outflow(source_file, file_type_token, variables_index, size, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3)
+
+def klodufy_outflow_8000au_positions ():
+    zoom = 8000
+    
+    # POSITIONS
+    variables_index = 1
+    logarithmic_mode = False
+    min_v1 = -1.2E17
+    max_v1 = 1.2E17
+    min_v2 = -1.2E17
+    max_v2 = 1.2E17
+    min_v3 = -1.2E17
+    max_v3 = 1.2E17
+    
+    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+def klodufy_outflow_8000au_velocities ():
+    zoom = 8000
+    
+    # VELOCITIES
+    variables_index = 2
+    logarithmic_mode = False
+    min_v1 = -4E5
+    max_v1 = 4E5
+    min_v2 = -4E5
+    max_v2 = 4E5
+    min_v3 = -4E5
+    max_v3 = 4E5
+    
+    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+def klodufy_outflow_8000au_B_vectors ():
+    zoom = 8000
+    
+    # B
+    variables_index = 3
+    logarithmic_mode = False
+    min_v1 = -0.03
+    max_v1 = 0.03
+    min_v2 = -0.03
+    max_v2 = 0.03
+    min_v3 = -0.03
+    max_v3 = 0.03
+    
+    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+def klodufy_outflow_8000au_rho_cr ():
+    zoom = 8000
+    
+    # rho, cr
+    variables_index = 4
+    logarithmic_mode = True
+    min_v1 = -20
+    max_v1 = -10
+    min_v2 = -16
+    max_v2 = -2
+    min_v3 = 0
+    max_v3 = 1
+    
+    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+def klodufy_outflow_1000au_positions ():
+    zoom = 1000
+    
+    # POSITIONS
+    variables_index = 1
+    logarithmic_mode = False
+    min_v1 = -1E16
+    max_v1 = 1E16
+    min_v2 = -1E16
+    max_v2 = 1E16
+    min_v3 = -1E16
+    max_v3 = 1E16
+    
+    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+def klodufy_outflow_1000au_velocities ():
+    zoom = 1000
+    
+    # VELOCITIES
+    variables_index = 2
+    logarithmic_mode = False
+    min_v1 = -4E5
+    max_v1 = 4E5
+    min_v2 = -4E5
+    max_v2 = 4E5
+    min_v3 = -4E5
+    max_v3 = 4E5
+    
+    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+def klodufy_outflow_1000au_B_vectors ():
+    zoom = 1000
+    
+    # B
+    variables_index = 3
+    logarithmic_mode = False
+    min_v1 = -0.04
+    max_v1 = 0.04
+    min_v2 = -0.04
+    max_v2 = 0.04
+    min_v3 = -0.04
+    max_v3 = 0.04
+    
+    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+def klodufy_outflow_1000au_rho_cr ():
+    zoom = 1000
+    
+    # rho, cr
+    variables_index = 4
+    logarithmic_mode = True
+    min_v1 = -17.5
+    max_v1 = -10
+    min_v2 = -15
+    max_v2 = -2
+    min_v3 = 0
+    max_v3 = 1
+    
+    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+def klodufy_outflow_100au_positions ():
+    zoom = 100
+    
+    # POSITIONS
+    variables_index = 1
+    logarithmic_mode = False
+    min_v1 = -8E14
+    max_v1 = 8E14
+    min_v2 = -8E14
+    max_v2 = 8E14
+    min_v3 = -8E14
+    max_v3 = 8E14
+    
+    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+def klodufy_outflow_100au_velocities ():
+    zoom = 100
+    
+    # VELOCITIES
+    variables_index = 2
+    logarithmic_mode = False
+    min_v1 = -4E5
+    max_v1 = 4E5
+    min_v2 = -4E5
+    max_v2 = 4E5
+    min_v3 = -4E5
+    max_v3 = 4E5
+    
+    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+def klodufy_outflow_100au_B_vectors ():
+    zoom = 100
+    
+    # B
+    variables_index = 3
+    logarithmic_mode = False
+    min_v1 = -0.04
+    max_v1 = 0.04
+    min_v2 = -0.04
+    max_v2 = 0.04
+    min_v3 = -0.04
+    max_v3 = 0.04
+    
+    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+def klodufy_outflow_100au_rho_cr ():
+    zoom = 100
+    
+    # rho, cr
+    variables_index = 4
+    logarithmic_mode = True
+    min_v1 = -17.1
+    max_v1 = -10
+    min_v2 = -15
+    max_v2 = -2
+    min_v3 = 0
+    max_v3 = 1
+    
+    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+
+# klodufy_outflow_8000au_positions()
+# klodufy_outflow_8000au_velocities()
+# klodufy_outflow_8000au_B_vectors()
+# klodufy_outflow_8000au_rho_cr()
+# klodufy_outflow_1000au_positions()
+# klodufy_outflow_1000au_velocities()
+# klodufy_outflow_1000au_B_vectors()
+# klodufy_outflow_1000au_rho_cr()
+# klodufy_outflow_100au_positions()
+# klodufy_outflow_100au_velocities()
+# klodufy_outflow_100au_B_vectors()
+# klodufy_outflow_100au_rho_cr()
