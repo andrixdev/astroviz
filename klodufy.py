@@ -12,6 +12,9 @@ import numpy as np # for .npy & Fortran .dat
 from scipy.io import FortranFile # for Fortran .dat
 import datetime
 
+error_start = "\033[91m"
+error_end = "\033[0m"
+    
 def remap (input, source_min, source_max, target_min, target_max, clamp_mode):
     if (clamp_mode & (input < source_min)):
         return target_min
@@ -20,10 +23,44 @@ def remap (input, source_min, source_max, target_min, target_max, clamp_mode):
     else:
         return target_min + (target_max - target_min) * (input - source_min) / (source_max - source_min)
 
-def write_unity_header (destination_file, file_name, base_size, testing_density, dimensionality):
+def write_unity_header (destination_file, file_name, base_size, testing_density, dimensionality, quality):
+    
     actual_size = math.floor(base_size * testing_density)
-    data_size = 2 * dimensionality * (actual_size ** 3)
-    data_format = "21" if dimensionality == 1 else "23"
+    
+    data_size_scale = 0
+    encoding = ""
+    
+    if ((quality == "low") & (dimensionality == 1)):
+        encoding = "R8"
+    elif ((quality == "high") & (dimensionality == 1)):
+        encoding = "R16"
+    elif ((quality == "low") & (dimensionality == 3)):
+        encoding = "RGB24"
+    elif ((quality == "high") & (dimensionality == 3)):
+        encoding = "RGB48"
+        
+    if (quality == "low"):
+        data_size_scale = 1
+    elif (quality == "high"):
+        data_size_scale = 2
+    else:
+        print(error_start + "[write_unity_header] Error - unknown quality: " + quality + error_end)
+        return None
+        
+    data_size = data_size_scale * dimensionality * (actual_size ** 3)
+    
+    # RGBAFloat -> "23"
+    data_format = ""
+    if (encoding == "R8"):
+        data_format = "5"
+    elif (encoding == "R16"):
+        data_format = "21"
+    elif (encoding == "RGB24"):
+        data_format = "7"
+    elif (encoding == "RGB48"):
+        data_format = "23"
+    else:
+        print(error_start + "[write_unity_header] Error - unknown encoding: " + encoding + error_end)
     
     destination_file.write("%YAML 1.1\n")
     destination_file.write("%TAG !u! tag:unity3d.com,2011:\n")
@@ -67,21 +104,42 @@ def write_unity_footer (destination_file):
     destination_file.write("    size: 0\n")
     destination_file.write("    path: \n")
 
-def parse_int_to_formatted_hex (value):
+def parse_int_to_formatted_hex (value, quality):
+    # Expected format by Unity R16 tex is a bit effed-up
+    # See, if color is of average intensity (min is 0000 max is ffff), you would expect something like 8803 or 88af without much difference
+    # Here, Unity reads the two end characters before the two first ones, so the actual displayed intensities will be reversing the stacks of 2, so: 0388 and af88
+    # Resulting in intensities of ~0% and ~70%...
+    # Took me ~16h to figure it all out
+    
+    # Unity R8 format reads hex values in natural order (fa is almost white, 80 middle, 0e almost black)
+    
     hex_value = hex(int(value))[2:] # Remove '0x' of hexadecimal notation
     
-    hexlen = len(str(hex_value)) # Make sure we always have 4 characters
-    if (hexlen == 1):
-        hex_value = "000" + str(hex_value)
-    elif (hexlen == 2):
-        hex_value = "00" + str(hex_value)
-    elif (hexlen == 3):
-        hex_value = "0" + str(hex_value)
-    elif (hexlen == 4):
-        hex_value = hex_value
-    else:
-        print("Sir we have a serious problem here, one hew value is either to short or too long!")
+    if (quality == "high"):
+        hexlen = len(str(hex_value)) # Make sure we always have 4 characters
+        if (hexlen == 1):
+            hex_value = "000" + str(hex_value)
+        elif (hexlen == 2):
+            hex_value = "00" + str(hex_value)
+        elif (hexlen == 3):
+            hex_value = "0" + str(hex_value)
+        elif (hexlen == 4):
+            hex_value = hex_value
+        else:
+            print(error_start + "[parse_int_to_formatted_hex] Sir we have a serious problem here, one hex value is either to short or too long! (high quality encoding)" + error_end)
             
+        # Now reverse the stacks of 2 for Unity R16 & RGB48 formats
+        hex_value = hex_value[2] + hex_value[3] + hex_value[0] + hex_value[1]
+            
+    elif (quality == "low"):
+        hexlen = len(str(hex_value)) # Make sure we always have 2 characters
+        if (hexlen == 1):
+            hex_value = "0" + str(hex_value)
+        elif (hexlen == 2):
+            hex_value = hex_value
+        else:
+            print(error_start + "[parse_int_to_formatted_hex] Sir we have a serious problem here, one hex value is either to short or too long! (low quality encoding)" + error_end)
+    
     return hex_value
 
 def round_to_n(x, n):
@@ -158,7 +216,7 @@ def klodufy_txt (path, size, source_min, source_max, testing_density):
         klodu[j] = round(klodu[j] / max_value * max_resolution)
         
         # Write final klodu values to text file
-        hex_value = parse_int_to_formatted_hex(klodu[j])
+        hex_value = parse_int_to_formatted_hex(klodu[j], quality)
         
         destination_file.write(str(hex_value))
         
@@ -217,7 +275,7 @@ def prepare_data_cube (source_file, file_type_token):
 # 'dimensionality' of 3 generates a 3D texture with "RGB" channels
 # 1-dimension intensities are exported to 16-bit single-channel 3D-texture, TextureFormat.R16 in Unity
 # 3-dimension intensities are exported to 3 x 16-bit RGB 3D-textures, TextureFormat.RGB48 in Unity
-def klodufy (source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez):
+def klodufy (source_file, file_type_token, size, dimensionality, quality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val):
     
     # Testing mode inits
     testing_density = min(1, testing_density) # Make sure it don't go krazy (> 1)
@@ -227,7 +285,7 @@ def klodufy (source_file, file_type_token, size, dimensionality, destination_fil
     destination_file_name = destination_file_name + ("" if testing_value == 1 else ("-1-in-" + str(testing_value)))
     destination_file_name = destination_file_name + ("-log" if logarithmic_mode else "")
     print("Starting work on " + destination_file_name + "...")
-    print("type: " + file_type_token + ", size: " + str(size) + ", dimensionality: " + str(dimensionality) + ", rounding mode " + ("on" if rounding_mode else "off") + ", logarithmic mode " + ("on" if logarithmic_mode else "off") + ", testing density: 1 in " + str(testing_value) + "³ == 1 in " + str(testing_value ** 3) + ", number of logs: " + str(nb_logs))
+    print("type: " + file_type_token + ", size: " + str(size) + ", dimensionality: " + str(dimensionality) + ", quality: " + quality + ", rounding mode " + ("on" if rounding_mode else "off") + ", logarithmic mode " + ("on" if logarithmic_mode else "off") + ", testing density: 1 in " + str(testing_value) + "³ == 1 in " + str(testing_value ** 3) + ", number of logs: " + str(nb_logs))
     
     # Load data cube
     data = prepare_data_cube(source_file, file_type_token)
@@ -239,10 +297,7 @@ def klodufy (source_file, file_type_token, size, dimensionality, destination_fil
     base_size = data.shape[0]
     base_count = base_size * base_size * base_size
     actual_count = math.floor(base_count * (testing_density ** 3))
-    write_unity_header(destination_file, destination_file_name, base_size, testing_density, dimensionality)
-    
-    # Set max resolution for hex values
-    max_resolution = 65536 - 1 # 2^16, starts at 0
+    write_unity_header(destination_file, destination_file_name, base_size, testing_density, dimensionality, quality)
     
     # Track time taken
     start_time = datetime.datetime.now()
@@ -332,8 +387,10 @@ def klodufy (source_file, file_type_token, size, dimensionality, destination_fil
     print("Scanned and mapped data in: " + str(round(delta, 2)) + " seconds.")
     
     # LOOP 2: normalize so it fits max resolution
+    max_resolution = (65536 - 1) if (quality == "high") else (256 - 1)
+    
     print("Normalizing " + log_ratio + str(data.size) + " (== " + str(actual_count) + ") values, parsing to hex and writing to file...")
-    print("Using min_val of " + str(min_val) + ", max_val of " + str(max_val) + " and max_rez of " + str(max_rez))
+    print("Using min_val of " + str(min_val) + ", max_val of " + str(max_val))
     j = 0
     logs_count = 0
     for a in range(0, x_range):
@@ -345,9 +402,9 @@ def klodufy (source_file, file_type_token, size, dimensionality, destination_fil
                 cc = c * step
                 
                 if (dimensionality == 1): # 1 dim
-                    new_value = round(remap(data[aa][bb][cc], min_val, max_val, 0, max_rez, True))
+                    new_value = round(remap(data[aa][bb][cc], min_val, max_val, 0, max_resolution, True))
                     
-                    hex_value = parse_int_to_formatted_hex(new_value)
+                    hex_value = parse_int_to_formatted_hex(new_value, quality)
                     
                     destination_file.write(str(hex_value))
                     
@@ -356,13 +413,13 @@ def klodufy (source_file, file_type_token, size, dimensionality, destination_fil
                         print(str(j) + "th hexadecimal value is: " + str(hex_value))
                         
                 else: # 3 dim
-                    new_vx = round(remap(data[aa][bb][cc][0], min_val, max_val, 0, max_rez, True))
-                    new_vy = round(remap(data[aa][bb][cc][1], min_val, max_val, 0, max_rez, True))
-                    new_vz = round(remap(data[aa][bb][cc][2], min_val, max_val, 0, max_rez, True))
+                    new_vx = round(remap(data[aa][bb][cc][0], min_val, max_val, 0, max_resolution, True))
+                    new_vy = round(remap(data[aa][bb][cc][1], min_val, max_val, 0, max_resolution, True))
+                    new_vz = round(remap(data[aa][bb][cc][2], min_val, max_val, 0, max_resolution, True))
                     
-                    hex_vx = parse_int_to_formatted_hex(new_vx)
-                    hex_vy = parse_int_to_formatted_hex(new_vy)
-                    hex_vz = parse_int_to_formatted_hex(new_vz)
+                    hex_vx = parse_int_to_formatted_hex(new_vx, quality)
+                    hex_vy = parse_int_to_formatted_hex(new_vy, quality)
+                    hex_vz = parse_int_to_formatted_hex(new_vz, quality)
                     
                     hex_rgb = str(hex_vx) + str(hex_vy) + str(hex_vz)
                     
@@ -388,15 +445,15 @@ def klodufy_brownie_B_intensity ():
     file_type_token = "NUMPY"
     size = 237
     dimensionality = 1
-    destination_file_name = "klodu-brown-dwarf-237"
+    quality = "high"
+    destination_file_name = "klo-brownie-intensity-237-" + quality + "Q"
     rounding_mode = False
     logarithmic_mode = False
-    testing_density = 1/101 # 1/1 is full rendering
-    nb_logs = 10
+    testing_density = 1/1 # 1/1 is full rendering
+    nb_logs = 8
     min_val = 0
-    max_val = 10000
-    max_rez = 255
-    klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+    max_val = 20000
+    klodufy(source_file, file_type_token, size, dimensionality, quality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
     
 # klodufy_brownie_B_intensity()
 
@@ -405,15 +462,15 @@ def klodufy_brownie_B_vectors ():
     file_type_token = "NUMPY"
     size = 475
     dimensionality = 3
+    quality = "low"
     rounding_mode = False
     logarithmic_mode = False
-    testing_density = 1/15 # 1/1 is full rendering
-    nb_logs = 15
-    min_val = -10000
-    max_val = 10000
-    max_rez = 255
-    destination_file_name = "klodu-brown-dwarf-B-vectors-475"
-    klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+    testing_density = 1/25    # 1/1 is full rendering
+    nb_logs = 8
+    min_val = -4000
+    max_val = 4000
+    destination_file_name = "klo-brownie-B-vectors-475-4000-" + quality + "Q"
+    klodufy(source_file, file_type_token, size, dimensionality, quality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
     
 # klodufy_brownie_B_vectors()
 
@@ -519,7 +576,7 @@ def klodufy_tidalstrip_vx ():
 
 # klodufy_tidalstrip_vx()
 
-def klodufy_outflow (source_file, file_type_token, variables_index, size, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3):
+def klodufy_outflow (source_file, file_type_token, quality, variables_index, size, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3):
     # variables_index == 1 -> x, y, z
     # variables_index == 2 -> vx, vy, vz
     # variables_index == 3 -> Bx, By, Bz
@@ -621,9 +678,10 @@ def klodufy_outflow (source_file, file_type_token, variables_index, size, destin
     print("Scanned and mapped data in: " + str(round(delta, 2)) + " seconds.")
     
     # LOOP 2: normalize so it fits max resolution
-    max_rez = 255
+    max_resolution = (65536 - 1) if (quality == "high") else (256 - 1)
+    
     print("Normalizing " + log_ratio + str(base_count) + " (== " + str(actual_count) + ") values, parsing to hex and writing to file...")
-    print("Using mins of " + str(min_v1) + " " + str(min_v2) + " " + str(min_v3) + " & maxs of " + str(max_v1) + " " + str(max_v2) + " " + str(max_v3) + " with max_rez of " + str(max_rez))
+    print("Using mins of " + str(min_v1) + " " + str(min_v2) + " " + str(min_v3) + " & maxs of " + str(max_v1) + " " + str(max_v2) + " " + str(max_v3))
     
     logs_count = 0
     for j in range(0, for_range):
@@ -649,13 +707,13 @@ def klodufy_outflow (source_file, file_type_token, variables_index, size, destin
             v2 = round_to_n(v2, 6)
             v3 = round_to_n(v3, 6)
             
-        new_v1 = round(remap(v1, min_v1, max_v1, 0, max_rez, True))
-        new_v2 = round(remap(v2, min_v2, max_v2, 0, max_rez, True))
-        new_v3 = round(remap(v3, min_v3, max_v3, 0, max_rez, True))
+        new_v1 = round(remap(v1, min_v1, max_v1, 0, max_resolution, True))
+        new_v2 = round(remap(v2, min_v2, max_v2, 0, max_resolution, True))
+        new_v3 = round(remap(v3, min_v3, max_v3, 0, max_resolution, True))
         
-        hex_v1 = parse_int_to_formatted_hex(new_v1)
-        hex_v2 = parse_int_to_formatted_hex(new_v2)
-        hex_v3 = parse_int_to_formatted_hex(new_v3)
+        hex_v1 = parse_int_to_formatted_hex(new_v1, quality)
+        hex_v2 = parse_int_to_formatted_hex(new_v2, quality)
+        hex_v3 = parse_int_to_formatted_hex(new_v3, quality)
         
         hex_rgb = str(hex_v1) + str(hex_v2) + str(hex_v3)
         
@@ -678,13 +736,14 @@ def klodufy_outflow (source_file, file_type_token, variables_index, size, destin
 
 def klodufy_outflow_values (zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode):
     file_type_token = "NUMPY"
+    quality = "high"
     size = 256
     rounding_mode = False
     testing_density = 1/26 # 1/1 is full rendering
     nb_logs = 5
     source_file = "./data/outflow_1M_isolated_collapse_" + str(zoom) + "AU.npy"
     destination_file_name = "klodu-outflow-" +  str(zoom) + "-var" + str(variables_index)
-    klodufy_outflow(source_file, file_type_token, variables_index, size, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3)
+    klodufy_outflow(source_file, file_type_token, quality, variables_index, size, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3)
 
 def klodufy_outflow_8000au_positions ():
     zoom = 8000
