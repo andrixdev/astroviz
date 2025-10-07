@@ -275,29 +275,32 @@ def prepare_data_cube (source_file, file_type_token):
 # 'dimensionality' of 3 generates a 3D texture with "RGB" channels
 # 1-dimension intensities are exported to 16-bit single-channel 3D-texture, TextureFormat.R16 in Unity
 # 3-dimension intensities are exported to 3 x 16-bit RGB 3D-textures, TextureFormat.RGB48 in Unity
-def klodufy (source_file, file_type_token, size, dimensionality, quality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val):
+def klodufy (source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val):
     
     # Testing mode inits
     testing_density = min(1, testing_density) # Make sure it don't go krazy (> 1)
     testing_value = round(1/testing_density)
     
+    # Prepare output file name
+    dest_file_name = dest_file_name + ("-HQ" if quality == "high" else "-LQ")
+    dest_file_name = dest_file_name + ("" if testing_value == 1 else ("-1-in-" + str(testing_value)))
+    dest_file_name = dest_file_name + ("-log" if logarithmic_mode else "")
+    
     # Hello
-    destination_file_name = destination_file_name + ("" if testing_value == 1 else ("-1-in-" + str(testing_value)))
-    destination_file_name = destination_file_name + ("-log" if logarithmic_mode else "")
-    print("Starting work on " + destination_file_name + "...")
+    print("Starting work on " + dest_file_name + "...")
     print("type: " + file_type_token + ", size: " + str(size) + ", dimensionality: " + str(dimensionality) + ", quality: " + quality + ", rounding mode " + ("on" if rounding_mode else "off") + ", logarithmic mode " + ("on" if logarithmic_mode else "off") + ", testing density: 1 in " + str(testing_value) + "³ == 1 in " + str(testing_value ** 3) + ", number of logs: " + str(nb_logs))
     
     # Load data cube
     data = prepare_data_cube(source_file, file_type_token)
     
     # Prepare export file
-    destination_file = open("output/" + destination_file_name + ".asset", "w")
+    destination_file = open("output/" + dest_path + dest_file_name + ".asset", "w")
     
     # Generate Unity header
     base_size = data.shape[0]
     base_count = base_size * base_size * base_size
     actual_count = math.floor(base_count * (testing_density ** 3))
-    write_unity_header(destination_file, destination_file_name, base_size, testing_density, dimensionality, quality)
+    write_unity_header(destination_file, dest_file_name, base_size, testing_density, dimensionality, quality)
     
     # Track time taken
     start_time = datetime.datetime.now()
@@ -438,7 +441,7 @@ def klodufy (source_file, file_type_token, size, dimensionality, quality, destin
     write_unity_footer(destination_file)
     
     # Conclude
-    print("File " + destination_file_name + ".asset was created")
+    print("File " + dest_file_name + ".asset was created")
 
 def klodufy_brownie_B_intensity ():
     source_file = "./data/brownie_B_field_stack_01863.npy"
@@ -446,14 +449,15 @@ def klodufy_brownie_B_intensity ():
     size = 237
     dimensionality = 1
     quality = "high"
-    destination_file_name = "klo-brownie-intensity-237-" + quality + "Q"
+    dest_path = ""
+    dest_file_name = "klo-brownie-intensity-237"
     rounding_mode = False
     logarithmic_mode = False
     testing_density = 1/1 # 1/1 is full rendering
     nb_logs = 8
     min_val = 0
     max_val = 20000
-    klodufy(source_file, file_type_token, size, dimensionality, quality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
+    klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
     
 # klodufy_brownie_B_intensity()
 
@@ -469,8 +473,9 @@ def klodufy_brownie_B_vectors ():
     nb_logs = 8
     min_val = -4000
     max_val = 4000
-    destination_file_name = "klo-brownie-B-vectors-475-4000-" + quality + "Q"
-    klodufy(source_file, file_type_token, size, dimensionality, quality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
+    dest_path = ""
+    dest_file_name = "klo-brownie-B-vectors-475-4000"
+    klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
     
 # klodufy_brownie_B_vectors()
 
@@ -486,8 +491,9 @@ def klodufy_dustyturb_density_numpy (): # Buggy or disordered outputs
     min_val = 0
     max_val = 1E-18
     max_rez = 255
-    destination_file_name = "klodu-dustyturb-256-density"
-    klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+    dest_path = ""
+    dest_file_name = "klo-dustyturb-256-density"
+    klodufy(source_file, file_type_token, size, dimensionality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
 
 # klodufy_dustyturb_density_numpy()
 
@@ -496,15 +502,16 @@ def klodufy_dustyturb_density ():
     file_type_token = "DAT"
     size = 256
     dimensionality = 1
+    quality = "high"
     rounding_mode = False
     logarithmic_mode = False
-    testing_density = 1/19 # 1/1 is full rendering
+    testing_density = 1/1 # 1/1 is full rendering
     nb_logs = 8
     min_val = 0
     max_val = 50000
-    max_rez = 255
-    destination_file_name = "klodu-dustyturb-256-density"
-    klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+    dest_path = ""
+    dest_file_name = "klo-dustyturb-256-density"
+    klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
 
 # klodufy_dustyturb_density()
 
@@ -513,70 +520,74 @@ def klodufy_giantclouds_rho ():
     file_type_token = "DAT"
     size = 256
     dimensionality = 1
+    quality = "high"
     rounding_mode = False
     logarithmic_mode = True
-    testing_density = 1/65 # 1/1 is full rendering
-    nb_logs = 2
-    destination_file_name = "klodu-giantclouds-00185-256-rho"
+    testing_density = 1/1 # 1/1 is full rendering
+    nb_logs = 8
+    dest_path = ""
+    dest_file_name = "klo-giantclouds-00185-256-rho"
     min_val = -3
     max_val = 3
-    max_rez = 255
-    klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+    klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
 
 # klodufy_giantclouds_rho()
 
 def klodufy_giantclouds_rhovx ():
-    source_file = "./data/giantclouds_00185_rhovz.dat"
+    source_file = "./data/giantclouds_00185_rhovx.dat"
     file_type_token = "DAT"
     size = 256
     dimensionality = 1
+    quality = "low"
     rounding_mode = False
     logarithmic_mode = False
-    testing_density = 1/29 # 1/1 is full rendering
-    nb_logs = 3
-    destination_file_name = "klodu-giantclouds-00185-256-rhovz"
+    testing_density = 1/1 # 1/1 is full rendering
+    nb_logs = 8
+    dest_path = ""
+    dest_file_name = "klo-giantclouds-00185-256-rhovx"
     min_val = -3000
     max_val = 3000
-    max_rez = 255
-    klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+    klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
     
 # klodufy_giantclouds_rhovx()
 
 def klodufy_tidalstrip_density ():
-    source_file = "./data/tidalstrip_00236_density.map" # Tidalstrip .map (same as Giantcloud .dat under the hood)
+    source_file = "./data/tidalstrip/tidalstrip_00236_density.map" # Tidalstrip .map (same as Giantcloud .dat under the hood)
     file_type_token = "DAT"
     size = 512
     dimensionality = 1
+    quality = "high"
     rounding_mode = False
     logarithmic_mode = True
-    testing_density = 1/17 # 1/1 is full rendering
+    testing_density = 1/3 # 1/1 is full rendering
     nb_logs = 8
     min_val = 1
     max_val = 10
-    max_rez = 255
-    destination_file_name = "klodu-tidalstrip-00236-512-density"
-    klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+    dest_path = ""
+    dest_file_name = "klo-tidalstrip-00236-512-density"
+    klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
     
 # klodufy_tidalstrip_density()
 
 def klodufy_tidalstrip_vx ():
-    source_file = "./data/tidalstrip_00236_vz.dat"
+    source_file = "./data/tidalstrip/tidalstrip_00236_vx.dat"
     file_type_token = "DAT"
     size = 512
     dimensionality = 1
+    quality = "low"
     rounding_mode = False
     logarithmic_mode = False
-    testing_density = 1/13 # 1/1 is full rendering
-    nb_logs = 10
+    testing_density = 1/3 # 1/1 is full rendering
+    nb_logs = 8
     min_val = -5
     max_val = 5
-    max_rez = 255
-    destination_file_name = "klodu-tidalstrip-00236-512-vz"
-    klodufy(source_file, file_type_token, size, dimensionality, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
+    dest_path = ""
+    dest_file_name = "klo-tidalstrip-00236-512-vx"
+    klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
 
 # klodufy_tidalstrip_vx()
 
-def klodufy_outflow (source_file, file_type_token, quality, variables_index, size, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3):
+def klodufy_outflow (source_file, file_type_token, quality, variables_index, size, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3):
     # variables_index == 1 -> x, y, z
     # variables_index == 2 -> vx, vy, vz
     # variables_index == 3 -> Bx, By, Bz
@@ -588,23 +599,26 @@ def klodufy_outflow (source_file, file_type_token, quality, variables_index, siz
     testing_density = min(1, testing_density) # Make sure it don't go krazy (> 1)
     testing_value = round(1/testing_density)
     
+    # Prepare output file name
+    dest_file_name = dest_file_name + ("-HQ" if quality == "high" else "-LQ")
+    dest_file_name = dest_file_name + ("" if testing_value == 1 else ("-1-in-" + str(testing_value)))
+    dest_file_name = dest_file_name + ("-log" if logarithmic_mode else "")
+    
     # Hello
-    destination_file_name = destination_file_name + ("" if testing_value == 1 else ("-1-in-" + str(testing_value)))
-    destination_file_name = destination_file_name + ("-log" if logarithmic_mode else "")
-    print("Starting work on " + destination_file_name + "...")
-    print("variables_index: " + str(variables_index) + ", file_type_token: " + file_type_token + ", size: " + str(size) + ", rounding mode " + ("on" if rounding_mode else "off") + ", logarithmic mode " + ("on" if logarithmic_mode else "off") + ", testing density: 1 in " + str(testing_value) + ", number of logs: " + str(nb_logs))
+    print("Starting work on " + dest_file_name + "...")
+    print("variables_index: " + str(variables_index) + ", type: " + file_type_token + ", size: " + str(size) + ", rounding mode " + ("on" if rounding_mode else "off") + ", logarithmic mode " + ("on" if logarithmic_mode else "off") + ", testing density: 1 in " + str(testing_value) + ", number of logs: " + str(nb_logs))
     
     # Load data cube
     data = prepare_data_cube(source_file, file_type_token)
     
     # Prepare export file
-    destination_file = open("output/" + destination_file_name + ".asset", "w")
+    destination_file = open("output/" + dest_path + dest_file_name + ".asset", "w")
     
     # Generate Unity header
     base_size = int(math.floor(data.shape[1] ** (1/3)))
     base_count = base_size * base_size * base_size
     actual_count = math.floor(base_count * testing_density)
-    write_unity_header(destination_file, destination_file_name, base_size, testing_density, dimensionality)
+    write_unity_header(destination_file, dest_file_name, base_size, testing_density, dimensionality, quality)
     
     # Track time taken
     start_time = datetime.datetime.now()
@@ -732,24 +746,23 @@ def klodufy_outflow (source_file, file_type_token, quality, variables_index, siz
     write_unity_footer(destination_file)
     
     # Conclude
-    print("File " + destination_file_name + ".asset was created")
+    print("File " + dest_file_name + ".asset was created")
 
-def klodufy_outflow_values (zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode):
+def klodufy_outflow_values (zoom, variables_index, quality, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode):
     file_type_token = "NUMPY"
-    quality = "high"
     size = 256
     rounding_mode = False
-    testing_density = 1/26 # 1/1 is full rendering
-    nb_logs = 5
+    testing_density = 1/1 # 1/1 is full rendering
+    nb_logs = 3
     source_file = "./data/outflow_1M_isolated_collapse_" + str(zoom) + "AU.npy"
-    destination_file_name = "klodu-outflow-" +  str(zoom) + "-var" + str(variables_index)
-    klodufy_outflow(source_file, file_type_token, quality, variables_index, size, destination_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3)
+    dest_path = ""
+    dest_file_name = "klo-outflow-" +  str(zoom) + "-var" + str(variables_index)
+    klodufy_outflow(source_file, file_type_token, quality, variables_index, size, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3)
 
 def klodufy_outflow_8000au_positions ():
     zoom = 8000
-    
-    # POSITIONS
     variables_index = 1
+    quality = "high"
     logarithmic_mode = False
     min_v1 = -1.2E17
     max_v1 = 1.2E17
@@ -758,12 +771,11 @@ def klodufy_outflow_8000au_positions ():
     min_v3 = -1.2E17
     max_v3 = 1.2E17
     
-    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+    klodufy_outflow_values(zoom, variables_index, quality, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
 def klodufy_outflow_8000au_velocities ():
     zoom = 8000
-    
-    # VELOCITIES
     variables_index = 2
+    quality = "low"
     logarithmic_mode = False
     min_v1 = -4E5
     max_v1 = 4E5
@@ -772,12 +784,11 @@ def klodufy_outflow_8000au_velocities ():
     min_v3 = -4E5
     max_v3 = 4E5
     
-    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+    klodufy_outflow_values(zoom, variables_index, quality, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
 def klodufy_outflow_8000au_B_vectors ():
     zoom = 8000
-    
-    # B
     variables_index = 3
+    quality = "low"
     logarithmic_mode = False
     min_v1 = -0.03
     max_v1 = 0.03
@@ -786,12 +797,11 @@ def klodufy_outflow_8000au_B_vectors ():
     min_v3 = -0.03
     max_v3 = 0.03
     
-    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+    klodufy_outflow_values(zoom, variables_index, quality, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
 def klodufy_outflow_8000au_rho_cr ():
     zoom = 8000
-    
-    # rho, cr
     variables_index = 4
+    quality = "high"
     logarithmic_mode = True
     min_v1 = -20
     max_v1 = -10
@@ -800,12 +810,11 @@ def klodufy_outflow_8000au_rho_cr ():
     min_v3 = 0
     max_v3 = 1
     
-    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+    klodufy_outflow_values(zoom, variables_index, quality, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
 def klodufy_outflow_1000au_positions ():
     zoom = 1000
-    
-    # POSITIONS
     variables_index = 1
+    quality = "high"
     logarithmic_mode = False
     min_v1 = -1E16
     max_v1 = 1E16
@@ -814,12 +823,11 @@ def klodufy_outflow_1000au_positions ():
     min_v3 = -1E16
     max_v3 = 1E16
     
-    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+    klodufy_outflow_values(zoom, variables_index, quality, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
 def klodufy_outflow_1000au_velocities ():
     zoom = 1000
-    
-    # VELOCITIES
     variables_index = 2
+    quality = "low"
     logarithmic_mode = False
     min_v1 = -4E5
     max_v1 = 4E5
@@ -828,12 +836,11 @@ def klodufy_outflow_1000au_velocities ():
     min_v3 = -4E5
     max_v3 = 4E5
     
-    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+    klodufy_outflow_values(zoom, variables_index, quality, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
 def klodufy_outflow_1000au_B_vectors ():
     zoom = 1000
-    
-    # B
     variables_index = 3
+    quality = "low"
     logarithmic_mode = False
     min_v1 = -0.04
     max_v1 = 0.04
@@ -842,12 +849,11 @@ def klodufy_outflow_1000au_B_vectors ():
     min_v3 = -0.04
     max_v3 = 0.04
     
-    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+    klodufy_outflow_values(zoom, variables_index, quality, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
 def klodufy_outflow_1000au_rho_cr ():
     zoom = 1000
-    
-    # rho, cr
     variables_index = 4
+    quality = "high"
     logarithmic_mode = True
     min_v1 = -17.5
     max_v1 = -10
@@ -856,12 +862,11 @@ def klodufy_outflow_1000au_rho_cr ():
     min_v3 = 0
     max_v3 = 1
     
-    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+    klodufy_outflow_values(zoom, variables_index, quality, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
 def klodufy_outflow_100au_positions ():
     zoom = 100
-    
-    # POSITIONS
     variables_index = 1
+    quality = "high"
     logarithmic_mode = False
     min_v1 = -8E14
     max_v1 = 8E14
@@ -870,12 +875,11 @@ def klodufy_outflow_100au_positions ():
     min_v3 = -8E14
     max_v3 = 8E14
     
-    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+    klodufy_outflow_values(zoom, variables_index, quality, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
 def klodufy_outflow_100au_velocities ():
     zoom = 100
-    
-    # VELOCITIES
     variables_index = 2
+    quality = "low"
     logarithmic_mode = False
     min_v1 = -4E5
     max_v1 = 4E5
@@ -884,12 +888,11 @@ def klodufy_outflow_100au_velocities ():
     min_v3 = -4E5
     max_v3 = 4E5
     
-    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+    klodufy_outflow_values(zoom, variables_index, quality, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
 def klodufy_outflow_100au_B_vectors ():
     zoom = 100
-    
-    # B
     variables_index = 3
+    quality = "low"
     logarithmic_mode = False
     min_v1 = -0.04
     max_v1 = 0.04
@@ -898,12 +901,11 @@ def klodufy_outflow_100au_B_vectors ():
     min_v3 = -0.04
     max_v3 = 0.04
     
-    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+    klodufy_outflow_values(zoom, variables_index, quality, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
 def klodufy_outflow_100au_rho_cr ():
     zoom = 100
-    
-    # rho, cr
     variables_index = 4
+    quality = "high"
     logarithmic_mode = True
     min_v1 = -17.1
     max_v1 = -10
@@ -912,7 +914,7 @@ def klodufy_outflow_100au_rho_cr ():
     min_v3 = 0
     max_v3 = 1
     
-    klodufy_outflow_values(zoom, variables_index, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
+    klodufy_outflow_values(zoom, variables_index, quality, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode)
 
 # klodufy_outflow_8000au_positions()
 # klodufy_outflow_8000au_velocities()
@@ -926,3 +928,95 @@ def klodufy_outflow_100au_rho_cr ():
 # klodufy_outflow_100au_velocities()
 # klodufy_outflow_100au_B_vectors()
 # klodufy_outflow_100au_rho_cr()
+
+def klodufy_tidalstrip_anim_vel (frame, vel_type):
+    file_end = tidal_frame_to_file_end(frame)
+    source_file = "./data/tidalstrip/tidal_" + vel_type + "_128_" + file_end + ".dat"
+    file_type_token = "DAT"
+    size = 128
+    dimensionality = 1
+    quality = "low"
+    rounding_mode = False
+    logarithmic_mode = False
+    testing_density = 1/1 # 1/1 is full rendering
+    nb_logs = 8
+    min_val = -5
+    max_val = 5
+    dest_path = "tidalstrip/5-frames/"
+    dest_file_name = "klo-tidal-" + vel_type + "-128-anim-" + str(frame)
+    klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
+
+# klodufy_tidalstrip_anim_vel(1, "vx")
+# klodufy_tidalstrip_anim_vel(2, "vx")
+# klodufy_tidalstrip_anim_vel(3, "vx")
+# klodufy_tidalstrip_anim_vel(4, "vx")
+# klodufy_tidalstrip_anim_vel(5, "vx")
+# klodufy_tidalstrip_anim_vel(1, "vy")
+# klodufy_tidalstrip_anim_vel(2, "vy")
+# klodufy_tidalstrip_anim_vel(3, "vy")
+# klodufy_tidalstrip_anim_vel(4, "vy")
+# klodufy_tidalstrip_anim_vel(5, "vy")
+# klodufy_tidalstrip_anim_vel(1, "vz")
+# klodufy_tidalstrip_anim_vel(2, "vz")
+# klodufy_tidalstrip_anim_vel(3, "vz")
+# klodufy_tidalstrip_anim_vel(4, "vz")
+# klodufy_tidalstrip_anim_vel(5, "vz")
+
+def klodufy_tidalstrip_anim_density (frame, index):
+    source_file = "./data/tidalstrip/51-frames/density_output00" + str(frame) + "_GID0009_res128.dat"
+    file_type_token = "DAT"
+    size = 128
+    dimensionality = 1
+    quality = "high"
+    rounding_mode = False
+    logarithmic_mode = True
+    testing_density = 1/1 # 1/1 is full rendering
+    nb_logs = 2
+    min_val = 1
+    max_val = 10
+    dest_path = "tidalstrip/32-frames/"
+    dest_file_name = "klo-tidal-density-128-anim-" + str(index)
+    klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
+    
+def klodufy_tidalstrip_full_32_anim ():
+    times = np.loadtxt("./data/tidalstrip/51-frames/filtered_times_only_32.txt")
+    size = len(times)
+    # print("Generating " + str(size) + " animation frames with density, vx, vy, and vz (" + 4 * size + " klodus in total)")
+    print("Generating " + str(size) + " animation frames with density (" + str(1 * size) + " klodus in total)...")
+    
+    for t in range(0, size):
+        time = int(times[t][0])
+        klodufy_tidalstrip_anim_density(time, t + 1)
+        
+    print("Generated " + str(size) + " animation frames.")
+    
+# klodufy_tidalstrip_full_32_anim()
+
+def klodufy_giantclouds_anim_rho (frame, index):
+    print(frame)
+    print(index)
+    
+    source_file = "./data/giantclouds/17-frames/cube_cloud_rho_output_00" + str(frame) + ".dat"
+    file_type_token = "DAT"
+    size = 256
+    dimensionality = 1
+    quality = "low"
+    rounding_mode = False
+    logarithmic_mode = True
+    testing_density = 1/1 # 1/1 is full rendering
+    nb_logs = 2
+    min_val = -3.5
+    max_val = 3.5
+    dest_path = "giantclouds/17-frames/"
+    dest_file_name = "klo-giantclouds-rho-256-anim-" + str(index)
+    klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
+        
+def klodufy_giantclouds_full_17_anim ():
+    print("Generating 17 animation frames with density (17 klodus in total)...")
+    
+    for f in range(172, 188 + 1):
+        klodufy_giantclouds_anim_rho(f, 1 + f - 172)
+        
+    print("Generated 17 animation frames.")
+    
+klodufy_giantclouds_full_17_anim()
