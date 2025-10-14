@@ -14,14 +14,14 @@ def prepare_tracers_data (source_file, file_type_token):
     if (file_type_token == "PHANTOM"):
         sdf, sdf_sinks = sarracen.read_phantom(source_file)
         
-        print(sdf.describe())
+        # print(sdf.describe())
         
         return sdf
         
     elif (file_type_token == "SHAMROCK"):
         sdf = sarracen.read_shamrock(source_file)
         
-        print(sdf.describe())
+        # print(sdf.describe())
         
         return sdf
         
@@ -33,6 +33,14 @@ def prepare_tracers_data (source_file, file_type_token):
 def round_to_n(x, n):
     return round(x, -int(math.floor(round(math.log10(abs(x)) - n + 1))))
 
+def prepend_zeros (value, target_length):
+    result = value
+    size = len(str(value))
+    for i in range(0, target_length - size):
+        result = "0" + str(result)
+        
+    return result
+    
 def remap (input, source_min, source_max, target_min, target_max, clamp_mode):
     if (clamp_mode & (input < source_min)):
         return target_min
@@ -42,7 +50,7 @@ def remap (input, source_min, source_max, target_min, target_max, clamp_mode):
         return target_min + (target_max - target_min) * (input - source_min) / (source_max - source_min)
 
 # Read SPH tracers particules data (positions and velocities)
-def sph_textufy (source_file, destination_file_name, rho_logarithmic_mode, soundspeed_logarithmic_mode,  pos_only, min_pos, max_pos, min_vel, max_vel, min_rho, max_rho, min_soundspeed, max_soundspeed, testing_density, nb_logs, skip_scanning):
+def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, rho_logarithmic_mode, soundspeed_logarithmic_mode,  pos_only, min_pos, max_pos, min_vel, max_vel, min_rho, max_rho, min_soundspeed, max_soundspeed, testing_density, nb_logs, skip_scanning):
     
     # Testing mode inits
     testing_density = min(1, testing_density) # Make sure it don't go krazy (> 1)
@@ -52,11 +60,11 @@ def sph_textufy (source_file, destination_file_name, rho_logarithmic_mode, sound
     data = prepare_tracers_data(source_file, file_type_token)
     
     # Hi
-    destination_file_name = destination_file_name + ("" if testing_value == 1 else ("-1-in-" + str(testing_value)))
-    print("Starting work on " + destination_file_name + "...")
+    dest_file_name = dest_file_name + ("" if testing_value == 1 else ("-1-in-" + str(testing_value)))
+    print("Starting work on " + dest_file_name + "...")
     
     # Prepare export file
-    destination_file = open("output/" + destination_file_name + ".txt", "w")
+    destination_file = open("output/" + dest_path + dest_file_name + ".txt", "w")
     
     # Loop into array to just output values as they are
     min_pos_value = float("inf")
@@ -73,7 +81,7 @@ def sph_textufy (source_file, destination_file_name, rho_logarithmic_mode, sound
     testing_value = round(1/testing_density)
     
     log_ratio = "all of " if testing_value == 1 else ("1 in " + str(testing_value) + " of all ")
-    print("Writing " + log_ratio + str(count) + " (== " + str(actual_count) + ") text rows to " + destination_file_name + ".txt...")
+    print("Writing " + log_ratio + str(count) + " (== " + str(actual_count) + ") text rows to " + dest_file_name + ".txt...")
     
     step = math.floor(testing_value)
     
@@ -179,15 +187,16 @@ def sph_textufy (source_file, destination_file_name, rho_logarithmic_mode, sound
     for j in range(0, actual_count):
         jj = j * step
         
-        min_target = 0
-        max_target = 10000
         min_pos_target = 0
         max_pos_target = 1000000
-        x = int(round_to_n(remap(data.iloc[jj]["x"], min_pos, max_pos, min_pos_target, max_pos_target, True), 7))
-        y = int(round_to_n(remap(data.iloc[jj]["y"], min_pos, max_pos, min_pos_target, max_pos_target, True), 7))
-        z = int(round_to_n(remap(data.iloc[jj]["z"], min_pos, max_pos, min_pos_target, max_pos_target, True), 7))
+        x = int(round_to_n(remap(data.iloc[jj]["x"], min_pos, max_pos, min_pos_target, max_pos_target, True), 6))
+        y = int(round_to_n(remap(data.iloc[jj]["y"], min_pos, max_pos, min_pos_target, max_pos_target, True), 6))
+        z = int(round_to_n(remap(data.iloc[jj]["z"], min_pos, max_pos, min_pos_target, max_pos_target, True), 6))
         
         if (not pos_only):
+            min_target = 0
+            max_target = 10000
+            
             vx = int(round_to_n(remap(data.iloc[jj]["vx"], min_vel, max_vel, min_target, max_target, True), 5))
             vy = int(round_to_n(remap(data.iloc[jj]["vy"], min_vel, max_vel, min_target, max_target, True), 5))
             vz = int(round_to_n(remap(data.iloc[jj]["vz"], min_vel, max_vel, min_target, max_target, True), 5))
@@ -223,32 +232,73 @@ def sph_textufy (source_file, destination_file_name, rho_logarithmic_mode, sound
     print("Normalized data in: " + str(round(delta, 2)) + " seconds.")
     
     # Conclude
-    print("File " + destination_file_name + ".txt was created")
+    print("File " + dest_file_name + ".txt was created")
 
 # source_file = "./data/binarydisk_orb0m02gprev_00100"
 # file_type_token = "PHANTOM"
-# destination_file_name = "sph-tracers-text-binarydisk"
+# dest_path = ""
+# dest_file_name = "sph-tracers-text-binarydisk"
 
-# source_file = "./data/disktilt/disktilt_fulldump_0314.sham"
-# destination_file_name = "sph-tracers-text-disktilt-0314-rho-sound"
+def sph_textufy_disktilt ():
+    # source_file = "./data/disktilt/disktilt_fulldump_0314.sham"
+    # file_type_token = "SHAMROCK"
+    # dest_path = ""
+    # dest_file_name = "sph-tracers-text-disktilt-0314-rho-sound"
 
-source_file = "./data/disktilt/disktilt_dump_0098.sham"
-destination_file_name = "sph-tracers-text-disktilt-reduced-rho-sound"
+    source_file = "./data/disktilt/disktilt_dump_0098.sham"
+    file_type_token = "SHAMROCK"
+    dest_path = ""
+    dest_file_name = "sph-disktilt-reduced"
+    pos_only = False
+    rho_logarithmic_mode = True
+    soundspeed_logarithmic_mode = True
+    min_pos = -2
+    max_pos = 2
+    min_vel = -1E-3
+    max_vel = 1E-3
+    min_rho = -10
+    max_rho = -4
+    min_soundspeed = -7
+    max_soundspeed = -5
+    testing_density = 1/4000 # 1/1 is full rendering
+    nb_logs = 10
+    skip_scanning = True
 
-file_type_token = "SHAMROCK"
-rho_logarithmic_mode = True
-soundspeed_logarithmic_mode = True
-pos_only = True
-min_pos = -2
-max_pos = 2
-min_vel = -1E-3
-max_vel = 1E-3
-min_rho = -10
-max_rho = -4
-min_soundspeed = -7
-max_soundspeed = -5
-testing_density = 1/4000 # 1/1 is full rendering
-nb_logs = 10
-skip_scanning = True
+    sph_textufy(source_file, file_type_token, dest_file_name, pos_only, rho_logarithmic_mode, soundspeed_logarithmic_mode, min_pos, max_pos, min_vel, max_vel, min_rho, max_rho, min_soundspeed, max_soundspeed, testing_density, nb_logs, skip_scanning)
+    
+# sph_textufy_disktilt()
 
-sph_textufy(source_file, destination_file_name, rho_logarithmic_mode, soundspeed_logarithmic_mode, pos_only, min_pos, max_pos, min_vel, max_vel, min_rho, max_rho, min_soundspeed, max_soundspeed, testing_density, nb_logs, skip_scanning)
+def sph_textufy_disktilt_frame (frame, index):
+    print("Generatig frame " + str(frame) + " of index " + str(index))
+    
+    frame_index = prepend_zeros(frame, 4)
+    source_file = "./data/disktilt/99-frames/dump_" + frame_index + ".sham"
+    file_type_token = "SHAMROCK"
+    dest_path = "disktilt/99-frames/"
+    dest_file_name = "sph-disktilt-reduced-" + frame_index
+    pos_only = True
+    rho_logarithmic_mode = False
+    soundspeed_logarithmic_mode = False
+    min_pos = -2
+    max_pos = 2
+    min_vel = 0
+    max_vel = 0
+    min_rho = 0
+    max_rho = 0
+    min_soundspeed = 0
+    max_soundspeed = 0
+    testing_density = 1/1 # 1/1 is full rendering
+    nb_logs = 2
+    skip_scanning = True
+
+    sph_textufy(source_file, file_type_token, dest_path, dest_file_name, pos_only, rho_logarithmic_mode, soundspeed_logarithmic_mode, min_pos, max_pos, min_vel, max_vel, min_rho, max_rho, min_soundspeed, max_soundspeed, testing_density, nb_logs, skip_scanning)
+    
+def sph_textufy_disktilt_full_99_anim():
+    print("Generating 99 sph animation frames with positions...")
+    
+    for f in range(0, 99):
+        sph_textufy_disktilt_frame(f, f)
+        
+    print("Generated 99 animation frames.")
+
+sph_textufy_disktilt_full_99_anim()

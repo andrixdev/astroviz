@@ -993,8 +993,8 @@ def klodufy_tidalstrip_full_32_anim ():
 # klodufy_tidalstrip_full_32_anim()
 
 def klodufy_giantclouds_anim_rho (frame, index):
-    print(frame)
-    print(index)
+    print("Frame " + str(frame))
+    print("Index " + str(index))
     
     source_file = "./data/giantclouds/17-frames/cube_cloud_rho_output_00" + str(frame) + ".dat"
     file_type_token = "DAT"
