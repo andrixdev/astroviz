@@ -977,7 +977,7 @@ def klodufy_tidalstrip_anim_density (frame, index):
     dest_path = "tidalstrip/32-frames/"
     dest_file_name = "klo-tidal-density-128-anim-" + str(index)
     klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
-    
+
 def klodufy_tidalstrip_full_32_anim ():
     times = np.loadtxt("./data/tidalstrip/51-frames/filtered_times_only_32.txt")
     size = len(times)
@@ -989,7 +989,7 @@ def klodufy_tidalstrip_full_32_anim ():
         klodufy_tidalstrip_anim_density(time, t + 1)
         
     print("Generated " + str(size) + " animation frames.")
-    
+
 # klodufy_tidalstrip_full_32_anim()
 
 def klodufy_giantclouds_anim_rho (frame, index):
@@ -1010,7 +1010,7 @@ def klodufy_giantclouds_anim_rho (frame, index):
     dest_path = "giantclouds/17-frames/"
     dest_file_name = "klo-giantclouds-rho-256-anim-" + str(index)
     klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
-        
+
 def klodufy_giantclouds_full_17_anim ():
     print("Generating 17 animation frames with density (17 klodus in total)...")
     
@@ -1018,5 +1018,5 @@ def klodufy_giantclouds_full_17_anim ():
         klodufy_giantclouds_anim_rho(f, 1 + f - 172)
         
     print("Generated 17 animation frames.")
-    
-klodufy_giantclouds_full_17_anim()
+
+# klodufy_giantclouds_full_17_anim()

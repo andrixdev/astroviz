@@ -42,7 +42,7 @@ def remap (input, source_min, source_max, target_min, target_max, clamp_mode):
         return target_min + (target_max - target_min) * (input - source_min) / (source_max - source_min)
 
 # Read SPH tracers particules data (positions and velocities)
-def sph_textufy (source_file, destination_file_name, rho_logarithmic_mode, soundspeed_logarithmic_mode, min_pos, max_pos, min_vel, max_vel, min_rho, max_rho, min_soundspeed, max_soundspeed, testing_density, nb_logs, skip_scanning):
+def sph_textufy (source_file, destination_file_name, rho_logarithmic_mode, soundspeed_logarithmic_mode,  pos_only, min_pos, max_pos, min_vel, max_vel, min_rho, max_rho, min_soundspeed, max_soundspeed, testing_density, nb_logs, skip_scanning):
     
     # Testing mode inits
     testing_density = min(1, testing_density) # Make sure it don't go krazy (> 1)
@@ -167,32 +167,48 @@ def sph_textufy (source_file, destination_file_name, rho_logarithmic_mode, sound
         print("Scanned and mapped data in: " + str(round(delta, 2)) + " seconds.")
     
     # LOOP 2: remap & write
+    x = min_pos
+    y = min_pos
+    z = min_pos
+    vx = min_vel
+    vy = min_vel
+    vz = min_vel
+    rho = min_rho
+    soundspeed = min_soundspeed
+    
     for j in range(0, actual_count):
         jj = j * step
         
-        rho = 1 * (data.iloc[jj]["hpart"] ** 3)
-        soundspeed = data.iloc[jj]["soundspeed"]
-        
-        if (rho_logarithmic_mode):
-            rho = math.log10(rho)
-        
-        if (soundspeed_logarithmic_mode):
-            soundspeed = math.log10(soundspeed)
-        
         min_target = 0
         max_target = 10000
+        min_pos_target = 0
         max_pos_target = 1000000
-        x = int(round_to_n(remap(data.iloc[jj]["x"], min_pos, max_pos, min_target, max_pos_target, True), 7))
-        y = int(round_to_n(remap(data.iloc[jj]["y"], min_pos, max_pos, min_target, max_pos_target, True), 7))
-        z = int(round_to_n(remap(data.iloc[jj]["z"], min_pos, max_pos, min_target, max_pos_target, True), 7))
-        vx = int(round_to_n(remap(data.iloc[jj]["vx"], min_vel, max_vel, min_target, max_target, True), 5))
-        vy = int(round_to_n(remap(data.iloc[jj]["vy"], min_vel, max_vel, min_target, max_target, True), 5))
-        vz = int(round_to_n(remap(data.iloc[jj]["vz"], min_vel, max_vel, min_target, max_target, True), 5))
-        rho = int(round_to_n(remap(rho, min_rho, max_rho, min_target, max_target, True), 5))
-        soundspeed = int(round_to_n(remap(soundspeed, min_soundspeed, max_soundspeed, min_target, max_target, True), 5))
+        x = int(round_to_n(remap(data.iloc[jj]["x"], min_pos, max_pos, min_pos_target, max_pos_target, True), 7))
+        y = int(round_to_n(remap(data.iloc[jj]["y"], min_pos, max_pos, min_pos_target, max_pos_target, True), 7))
+        z = int(round_to_n(remap(data.iloc[jj]["z"], min_pos, max_pos, min_pos_target, max_pos_target, True), 7))
         
-        row = str(x) + " " + str(y) + " " + str(z) + " " + str(vx) + " " + str(vy) + " " + str(vz) + " " + str(rho) + " " + str(soundspeed)
+        if (not pos_only):
+            vx = int(round_to_n(remap(data.iloc[jj]["vx"], min_vel, max_vel, min_target, max_target, True), 5))
+            vy = int(round_to_n(remap(data.iloc[jj]["vy"], min_vel, max_vel, min_target, max_target, True), 5))
+            vz = int(round_to_n(remap(data.iloc[jj]["vz"], min_vel, max_vel, min_target, max_target, True), 5))
+            
+            rho = 1 * (data.iloc[jj]["hpart"] ** 3)
+            soundspeed = data.iloc[jj]["soundspeed"]
+            
+            if (rho_logarithmic_mode):
+                rho = math.log10(rho)
+            
+            if (soundspeed_logarithmic_mode):
+                soundspeed = math.log10(soundspeed)
+                
+            rho = int(round_to_n(remap(rho, min_rho, max_rho, min_target, max_target, True), 5))
+            soundspeed = int(round_to_n(remap(soundspeed, min_soundspeed, max_soundspeed, min_target, max_target, True), 5))
         
+        row = str(x) + " " + str(y) + " " + str(z)
+        
+        if (not pos_only):
+            row = row + " " + str(vx) + " " + str(vy) + " " + str(vz) + " " + str(rho) + " " + str(soundspeed)
+            
         if (j % max(1, int(round(actual_count/nb_logs))) == 0):
             print(str(j) + "th remapped row is: " + row)
 
@@ -213,15 +229,16 @@ def sph_textufy (source_file, destination_file_name, rho_logarithmic_mode, sound
 # file_type_token = "PHANTOM"
 # destination_file_name = "sph-tracers-text-binarydisk"
 
-source_file = "./data/disktilt_fulldump_0314.sham"
-destination_file_name = "sph-tracers-text-disktilt-0314-rho-sound"
+# source_file = "./data/disktilt/disktilt_fulldump_0314.sham"
+# destination_file_name = "sph-tracers-text-disktilt-0314-rho-sound"
 
-# source_file = "./data/disktilt_dump_0098.sham"
-# destination_file_name = "sph-tracers-text-disktilt-reduced-rho-sound"
+source_file = "./data/disktilt/disktilt_dump_0098.sham"
+destination_file_name = "sph-tracers-text-disktilt-reduced-rho-sound"
 
 file_type_token = "SHAMROCK"
 rho_logarithmic_mode = True
 soundspeed_logarithmic_mode = True
+pos_only = True
 min_pos = -2
 max_pos = 2
 min_vel = -1E-3
@@ -230,8 +247,8 @@ min_rho = -10
 max_rho = -4
 min_soundspeed = -7
 max_soundspeed = -5
-testing_density = 1/400 # 1/1 is full rendering
+testing_density = 1/4000 # 1/1 is full rendering
 nb_logs = 10
 skip_scanning = True
 
-sph_textufy(source_file, destination_file_name, rho_logarithmic_mode, soundspeed_logarithmic_mode, min_pos, max_pos, min_vel, max_vel, min_rho, max_rho, min_soundspeed, max_soundspeed, testing_density, nb_logs, skip_scanning)
+sph_textufy(source_file, destination_file_name, rho_logarithmic_mode, soundspeed_logarithmic_mode, pos_only, min_pos, max_pos, min_vel, max_vel, min_rho, max_rho, min_soundspeed, max_soundspeed, testing_density, nb_logs, skip_scanning)
