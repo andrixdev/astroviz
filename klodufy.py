@@ -145,6 +145,14 @@ def parse_int_to_formatted_hex (value, quality):
 def round_to_n(x, n):
     return round(x, -int(math.floor(round(math.log10(abs(x)) - n + 1))))
 
+def prepend_zeros (value, target_length):
+    result = value
+    size = len(str(value))
+    for i in range(0, target_length - size):
+        result = "0" + str(result)
+        
+    return result
+    
 # Count points in pointcloud to create 3D texture (voxel cloud)
 # Final texture coordinates are implict, between [0, 1] [0, 1] [0, 1], sliced into size³ cubes
 # Source coordinates have to be remapped to [0, 1] [0, 1] [0, 1]
@@ -992,31 +1000,35 @@ def klodufy_tidalstrip_full_32_anim ():
 
 # klodufy_tidalstrip_full_32_anim()
 
-def klodufy_giantclouds_anim_rho (frame, index):
+def klodufy_giantclouds_anim_frame (frame, index, type):
     print("Frame " + str(frame))
     print("Index " + str(index))
+    print("Type " + type)
     
-    source_file = "./data/giantclouds/17-frames/cube_cloud_rho_output_00" + str(frame) + ".dat"
+    source_file = "./data/giantclouds/37-frames/" + type + "/cube_cloud_" + type + "_output_00" + str(frame) + ".dat"
     file_type_token = "DAT"
     size = 256
     dimensionality = 1
     quality = "low"
     rounding_mode = False
-    logarithmic_mode = True
+    logarithmic_mode = True if (type == "rho") else False
     testing_density = 1/1 # 1/1 is full rendering
     nb_logs = 2
-    min_val = -3.5
-    max_val = 3.5
-    dest_path = "giantclouds/17-frames/"
-    dest_file_name = "klo-giantclouds-rho-256-anim-" + str(index)
+    min_val = -3.5 if (type == "rho") else -4000
+    max_val = 3.5 if (type == "rho") else 4000
+    dest_path = "giantclouds/38-frames/" + type + "/"
+    dest_file_name = "klo-giantclouds-" + type + "-256-anim-" + prepend_zeros(str(index), 3)
     klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
 
-def klodufy_giantclouds_full_17_anim ():
-    print("Generating 17 animation frames with density (17 klodus in total)...")
+def klodufy_giantclouds_full_37_anim ():
+    print("Generating 37 animation frames with density & velocities (4x37 == 148 klodus in total)...")
     
-    for f in range(172, 188 + 1):
-        klodufy_giantclouds_anim_rho(f, 1 + f - 172)
+    for f in range(172, 208 + 1):
+        klodufy_giantclouds_anim_frame(f, 1 + f - 172, "rho")
+        klodufy_giantclouds_anim_frame(f, 1 + f - 172, "rhovx")
+        klodufy_giantclouds_anim_frame(f, 1 + f - 172, "rhovy")
+        klodufy_giantclouds_anim_frame(f, 1 + f - 172, "rhovz")
         
-    print("Generated 17 animation frames.")
+    print("Generated 37 animation frames.")
 
-# klodufy_giantclouds_full_17_anim()
+klodufy_giantclouds_full_37_anim()
