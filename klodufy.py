@@ -281,8 +281,10 @@ def prepare_data_cube (source_file, file_type_token):
 # input dataset should include xyz
 # 'dimensionality' of 1 generates a 3D texture with "R" signel channel
 # 'dimensionality' of 3 generates a 3D texture with "RGB" channels
-# 1-dimension intensities are exported to 16-bit single-channel 3D-texture, TextureFormat.R16 in Unity
-# 3-dimension intensities are exported to 3 x 16-bit RGB 3D-textures, TextureFormat.RGB48 in Unity
+# 1-dimension low quality intensities are exported to 8-bit single-channel 3D-texture, TextureFormat.R8 in Unity
+# 1-dimension high quality intensities are exported to 16-bit single-channel 3D-texture, TextureFormat.R16 in Unity
+# 3-dimension low quality intensities are exported to 3 x 8-bit RGB 3D-textures, TextureFormat.RGB24 in Unity
+# 3-dimension high quality intensities are exported to 3 x 16-bit RGB 3D-textures, TextureFormat.RGB48 in Unity
 def klodufy (source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val):
     
     # Testing mode inits

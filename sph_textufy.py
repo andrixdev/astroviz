@@ -14,7 +14,7 @@ def prepare_tracers_data (source_file, file_type_token):
     if (file_type_token == "PHANTOM"):
         sdf, sdf_sinks = sarracen.read_phantom(source_file)
         
-        # print(sdf.describe())
+        print(sdf.describe())
         
         return sdf
         
@@ -49,7 +49,7 @@ def remap (input, source_min, source_max, target_min, target_max, clamp_mode):
     else:
         return target_min + (target_max - target_min) * (input - source_min) / (source_max - source_min)
 
-# Read SPH tracers particules data (positions and velocities)
+# Read SPH tracers particles data (positions and velocities)
 def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, rho_logarithmic_mode, soundspeed_logarithmic_mode,  pos_only, min_pos, max_pos, min_vel, max_vel, min_rho, max_rho, min_soundspeed, max_soundspeed, testing_density, nb_logs, skip_scanning):
     
     # Testing mode inits
@@ -234,11 +234,6 @@ def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, rho_lo
     # Conclude
     print("File " + dest_file_name + ".txt was created")
 
-# source_file = "./data/binarydisk_orb0m02gprev_00100"
-# file_type_token = "PHANTOM"
-# dest_path = ""
-# dest_file_name = "sph-tracers-text-binarydisk"
-
 def sph_textufy_disktilt ():
     # source_file = "./data/disktilt/disktilt_fulldump_0314.sham"
     # file_type_token = "SHAMROCK"
@@ -292,7 +287,7 @@ def sph_textufy_disktilt_frame (frame, index):
     skip_scanning = True
 
     sph_textufy(source_file, file_type_token, dest_path, dest_file_name, pos_only, rho_logarithmic_mode, soundspeed_logarithmic_mode, min_pos, max_pos, min_vel, max_vel, min_rho, max_rho, min_soundspeed, max_soundspeed, testing_density, nb_logs, skip_scanning)
-    
+
 def sph_textufy_disktilt_full_99_anim():
     print("Generating 99 sph animation frames with positions...")
     
@@ -302,3 +297,9 @@ def sph_textufy_disktilt_full_99_anim():
     print("Generated 99 animation frames.")
 
 # sph_textufy_disktilt_full_99_anim()
+
+source_file = "./data/binarydisk/binarydisk_orb0m02gprev_00100"
+file_type_token = "PHANTOM"
+dest_path = ""
+dest_file_name = "sph-binarydisk"
+prepare_tracers_data(source_file, file_type_token)
