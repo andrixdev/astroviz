@@ -972,35 +972,61 @@ def klodufy_tidalstrip_anim_vel (frame, vel_type):
 # klodufy_tidalstrip_anim_vel(4, "vz")
 # klodufy_tidalstrip_anim_vel(5, "vz")
 
-def klodufy_tidalstrip_anim_density (frame, index):
-    source_file = "./data/tidalstrip/51-frames/density_output00" + str(frame) + "_GID0009_res128.dat"
+def klodufy_tidalstrip_anim_frame (frame, index, type):
+    print("Frame " + str(frame))
+    print("Index " + str(index))
+    print("Type " + type)
+    
     file_type_token = "DAT"
     size = 128
+    quality = "low"
     dimensionality = 1
-    quality = "high"
     rounding_mode = False
-    logarithmic_mode = True
     testing_density = 1/1 # 1/1 is full rendering
     nb_logs = 2
-    min_val = 1
-    max_val = 10
-    dest_path = "tidalstrip/32-frames/"
-    dest_file_name = "klo-tidal-density-128-anim-" + str(index)
+    
+    if (type == "rho"):
+        logarithmic_mode = True
+        min_val = 1
+        max_val = 10
+        file_prefix = "density"
+        
+    elif (type == "vx" or type == "vy" or type == "vz"):
+        logarithmic_mode = False
+        min_val = -5
+        max_val = 5
+        
+        if (type == "vx"):
+            file_prefix = "velocity_x"
+        elif (type == "vy"):
+            file_prefix = "velocity_y"
+        else:
+            file_prefix = "velocity_z"
+            
+    else:
+        print(error_start + "[klodufy_tidalstrip_anim_frame] Error - unknown type: " + type + error_end)
+        
+    source_file = "./data/tidalstrip/46-frames/" + file_prefix + "_output00" + str(frame) + "_GID0009_res128.dat"
+    dest_file_name = "klo-tidal-" + type + "-128-anim-" + prepend_zeros(str(index), 3)
+    dest_path = "tidalstrip/46-frames/" + type + "/"
     klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
 
-def klodufy_tidalstrip_full_32_anim ():
-    times = np.loadtxt("./data/tidalstrip/51-frames/filtered_times_only_32.txt")
+def klodufy_tidalstrip_full_46_anim ():
+    times = np.loadtxt("./data/tidalstrip/46-frames/filtered_times_all.txt")
     size = len(times)
-    # print("Generating " + str(size) + " animation frames with density, vx, vy, and vz (" + 4 * size + " klodus in total)")
-    print("Generating " + str(size) + " animation frames with density (" + str(1 * size) + " klodus in total)...")
+    
+    print("Generating " + str(size) + " animation frames with rho, vx, vy, and vz (" + str(4 * size) + " klodus in total)")
     
     for t in range(0, size):
         time = int(times[t][0])
-        klodufy_tidalstrip_anim_density(time, t + 1)
+        klodufy_tidalstrip_anim_frame(time, t + 1, "rho")
+        klodufy_tidalstrip_anim_frame(time, t + 1, "vx")
+        klodufy_tidalstrip_anim_frame(time, t + 1, "vy")
+        klodufy_tidalstrip_anim_frame(time, t + 1, "vz")
         
     print("Generated " + str(size) + " animation frames.")
 
-# klodufy_tidalstrip_full_32_anim()
+# klodufy_tidalstrip_full_46_anim()
 
 def klodufy_giantclouds_anim_frame (frame, index, type):
     print("Frame " + str(frame))
@@ -1033,4 +1059,38 @@ def klodufy_giantclouds_full_37_anim ():
         
     print("Generated 37 animation frames.")
 
-klodufy_giantclouds_full_37_anim()
+# klodufy_giantclouds_full_37_anim()
+
+
+def klodufy_dustyturb_anim_frame (frame, index, type):
+    print("Frame " + str(frame))
+    print("Index " + str(index))
+    print("Type " + type)
+    
+    source_file = "./data/dustyturb/1-frame/" + str(frame) + "_" + type + ".dat"
+    file_type_token = "DAT"
+    size = 256
+    dimensionality = 1
+    quality = "low"
+    rounding_mode = False
+    logarithmic_mode = True if (type == "rho") else False
+    testing_density = 1/1 # 1/1 is full rendering
+    nb_logs = 5
+    min_val = -3.5 if (type == "rho") else -500
+    max_val = 6 if (type == "rho") else 500
+    dest_path = "dustyturb/1-frame/" + type + "/"
+    dest_file_name = "klo-dustyturb-" + type + "-256-anim-" + prepend_zeros(str(index), 3)
+    klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
+
+def klodufy_dustyturb_full_XX_anim ():
+    print("Generating X animation frames with density & velocities (4xX == 4X klodus in total)...")
+    
+    for f in range(190, 190 + 1):
+        klodufy_dustyturb_anim_frame(f, 1 + f - 190, "rho")
+        klodufy_dustyturb_anim_frame(f, 1 + f - 190, "vx")
+        klodufy_dustyturb_anim_frame(f, 1 + f - 190, "vy")
+        klodufy_dustyturb_anim_frame(f, 1 + f - 190, "vz")
+        
+    print("Generated X animation frames.")
+    
+klodufy_dustyturb_full_XX_anim()
