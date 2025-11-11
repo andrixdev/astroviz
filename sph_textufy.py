@@ -45,7 +45,7 @@ def prepare_tracers_data (source_file, file_type_token):
         return False
 
 def round_to_n(x, n):
-    return round(x, -int(math.floor(round(math.log10(abs(x)) - n + 1))))
+    return 0 if (x == 0) else round(x, -int(math.floor(round(math.log10(abs(x)) - n + 1))))
 
 def prepend_zeros (value, target_length):
     result = value
@@ -111,12 +111,17 @@ def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, dimens
                 dimension_name = dimensions[d][0]
                 dimension_mode = dimensions[d][1]
                 
-                # Grab data value
-                # Special case for Yona's rho, derived from hpart
-                if (dimension_name == "rho"):
-                    val = 1 * (data.iloc[ii]["hpart"] ** 3)
-                else:
-                    val = data.iloc[ii][dimension_name]
+                # Grab data value Shamrock way (dimension name)
+                if (file_type_token == "SHAMROCK"):
+                    # Special case for Yona's rho, derived from hpart
+                    if (dimension_name == "rho"):
+                        val = 1 * (data.iloc[ii]["hpart"] ** 3)
+                    else:
+                        val = data.iloc[ii][dimension_name]
+                        
+                # Grab data value Numpy way (just the order)
+                elif (file_type_token == "NUMPY"):
+                    val = data[ii][d]
                     
                 # Checking mode
                 if (dimension_mode == "log"):
@@ -168,12 +173,17 @@ def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, dimens
             dimension_quality = dimensions[d][2]
             digits = low_quality_digits if (dimension_quality == "LQ") else high_quality_digits
             
-            # Grab data value
-            # Special case for Yona's rho, derived from hpart
-            if (dimension_name == "rho"):
-                val = 1 * (data.iloc[jj]["hpart"] ** 3)
-            else:
-                val = data.iloc[jj][dimension_name]
+            # Grab data value Shamrock way (dimension name)
+            if (file_type_token == "SHAMROCK"):
+                # Special case for Yona's rho, derived from hpart
+                if (dimension_name == "rho"):
+                    val = 1 * (data.iloc[jj]["hpart"] ** 3)
+                else:
+                    val = data.iloc[jj][dimension_name]
+                    
+            # Grab data value Numpy way (just the order)
+            elif (file_type_token == "NUMPY"):
+                val = data[jj][d]
                 
             # Checking mode
             if (dimension_mode == "log"):
@@ -213,21 +223,22 @@ def sph_textufy_disktilt ():
     dest_path = "disktilt/test/"
     dest_file_name = "sph-disktilt-full-0314-xyzvxyzrhosound"
     minmaxs = [ [-1.8, 1.8], [-1.8, 1.8], [-1.8, 1.8], [-1E-3, 1E-3], [-1E-3, 1E-3], [-1E-3, 1E-3], [-10, -3.5], [-6.3, -5.3] ]
+    testing_density = 1/100 # 1/1 is full rendering
 
     # source_file = "./data/disktilt/disktilt_dump_0098.sham"
     # file_type_token = "SHAMROCK"
     # dest_path = "disktilt/test/"
     # dest_file_name = "sph-disktilt-reduced-xyzvxyzrhosound"
     # minmaxs = [ [-1.8, 1.8], [-1.8, 1.8], [-1.8, 1.8], [-1E-3, 1E-3], [-1E-3, 1E-3], [-1E-3, 1E-3], [-6.5, -3.5], [-6.3, -5.3] ]
+    # testing_density = 1/10 # 1/1 is full rendering
     
-    testing_density = 1/10 # 1/1 is full rendering
     nb_logs = 10
     skip_scanning = False
 
     sph_textufy(source_file, file_type_token, dest_path, dest_file_name, dimensions, minmaxs, testing_density, nb_logs, skip_scanning)
-    
-sph_textufy_disktilt()
+# sph_textufy_disktilt()
 
+# OBSOLETE
 def sph_textufy_disktilt_frame (frame, index):
     print("Generatig frame " + str(frame) + " of index " + str(index))
     
@@ -252,7 +263,6 @@ def sph_textufy_disktilt_frame (frame, index):
     skip_scanning = True
 
     sph_textufy(source_file, file_type_token, dest_path, dest_file_name, pos_only, rho_logarithmic_mode, soundspeed_logarithmic_mode, min_pos, max_pos, min_vel, max_vel, min_rho, max_rho, min_soundspeed, max_soundspeed, testing_density, nb_logs, skip_scanning)
-
 def sph_textufy_disktilt_full_99_anim():
     print("Generating 99 sph animation frames with positions...")
     
@@ -260,7 +270,6 @@ def sph_textufy_disktilt_full_99_anim():
         sph_textufy_disktilt_frame(f, f)
         
     print("Generated 99 animation frames.")
-
 # sph_textufy_disktilt_full_99_anim()
 
 # source_file = "./data/binarydisk/binarydisk_orb0m02gprev_00100"
@@ -269,6 +278,17 @@ def sph_textufy_disktilt_full_99_anim():
 # dest_file_name = "sph-binarydisk"
 # prepare_tracers_data(source_file, file_type_token)
 
-# source_file = "./data/dwarfgal/data_for_alex.npy"
-# file_type_token = "NUMPY"
-# prepare_tracers_data (source_file, file_type_token)
+def textufy_dwarfgal ():
+    dimensions = [ ["x", "linear", "HQ"], ["y", "linear", "HQ"], ["z", "linear", "HQ"], ["rho", "log", "LQ"] ]
+    
+    source_file = "./data/dwarfgal/1-frame/data_for_alex.npy"
+    file_type_token = "NUMPY"
+    dest_path = "dwarfgal/1-frame/"
+    dest_file_name = "dwarfgal-xyzrho"
+    minmaxs = [ [-2.5, 2.5], [-2.5, 2.5], [-2.5, 2.5], [-1, 10] ]
+    testing_density = 1/1 # 1/1 is full rendering
+    nb_logs = 10
+    skip_scanning = False
+
+    sph_textufy(source_file, file_type_token, dest_path, dest_file_name, dimensions, minmaxs, testing_density, nb_logs, skip_scanning)
+textufy_dwarfgal()
