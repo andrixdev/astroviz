@@ -153,10 +153,7 @@ def prepend_zeros (value, target_length):
         
     return result
     
-# Count points in pointcloud to create 3D texture (voxel cloud)
-# Final texture coordinates are implict, between [0, 1] [0, 1] [0, 1], sliced into size³ cubes
-# Source coordinates have to be remapped to [0, 1] [0, 1] [0, 1]
-# testing_density currently doesn't work (default value of 1)
+# Count points in pointcloud to create 3D texture (voxel cloud), or add their density
 def klodufy_txt (path, size, source_min, source_max, testing_density):
     arr = np.loadtxt(path)
     leng = arr.shape[0]
@@ -297,7 +294,7 @@ def klodufy (source_file, file_type_token, size, dimensionality, quality, dest_p
     dest_file_name = dest_file_name + ("-log" if logarithmic_mode else "")
     
     # Hello
-    print("Starting work on " + dest_file_name + "...")
+    print("Starting work on data cube " + dest_file_name + "...")
     print("type: " + file_type_token + ", size: " + str(size) + ", dimensionality: " + str(dimensionality) + ", quality: " + quality + ", rounding mode " + ("on" if rounding_mode else "off") + ", logarithmic mode " + ("on" if logarithmic_mode else "off") + ", testing density: 1 in " + str(testing_value) + "³ == 1 in " + str(testing_value ** 3) + ", number of logs: " + str(nb_logs))
     
     # Load data cube
