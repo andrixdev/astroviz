@@ -80,15 +80,11 @@ def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, dimens
     # Prepare export file
     destination_file = open("output/" + dest_path + dest_file_name + ".txt", "w")
     
-    # Init minmax array (extremal values of positions, velocities... whatever)
-    real_minmaxs = []
+    # Get dimensions
     dims = len(dimensions)
-    for d in range(0, dims):
-        real_minmaxs.append([float("inf"), float("-inf")])
     
     count = data.shape[0]
     actual_count = math.floor(count * testing_density)
-    testing_value = round(1/testing_density)
     
     log_ratio = "all of " if testing_value == 1 else ("1 in " + str(testing_value) + " of all ")
     print("Writing " + log_ratio + str(count) + " (== " + str(actual_count) + ") text rows to " + dest_file_name + ".txt...")
@@ -101,6 +97,12 @@ def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, dimens
     # LOOP 1: scan
     if (not skip_scanning):
         
+        # Init scanned minmax array (extremal values of positions, velocities... whatever)
+        real_minmaxs = []
+        for d in range(0, dims):
+            real_minmaxs.append([float("inf"), float("-inf")])
+        
+        # Start loop
         ii = 0
         for i in range(0, actual_count):
             ii = i * step
@@ -146,7 +148,7 @@ def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, dimens
             if (i % max(1, int(round(actual_count/nb_logs))) == 0):
                 print(str(i) + "th row is: " + row)
             
-        # Display extrema
+        # Log detected extrema
         for d in range(0, dims):
             dimension_name = dimensions[d][0]
             print("Min value for " + dimension_name + " is: " + str(real_minmaxs[d][0]))
