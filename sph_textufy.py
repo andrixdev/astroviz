@@ -131,7 +131,9 @@ def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, dimens
                 val = round_to_n(val, 5)
                 
                 # Feed row to potentially print
-                row = row + " " + str(val)
+                if (d > 0):
+                    row = row + " "
+                row = row + str(val)
                 
                 # Update max value
                 if (val > real_minmaxs[d][1]):
@@ -197,7 +199,9 @@ def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, dimens
             val = int(round_to_n(remap(val, min_val, max_val, min_target, max_target, True), digits + 1))
             
             # Feed row to later write to file
-            row = row + " " + str(val)
+            if (d > 0):
+                row = row + " "
+            row = row + str(val)
             
         if (j % max(1, int(round(actual_count/nb_logs))) == 0):
             print(str(j) + "th remapped row is: " + row)
