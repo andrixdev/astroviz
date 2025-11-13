@@ -82,7 +82,6 @@ def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, dimens
     
     # Get dimensions
     dims = len(dimensions)
-    
     count = data.shape[0]
     actual_count = math.floor(count * testing_density)
     
@@ -285,15 +284,15 @@ def sph_textufy_disktilt_full_99_anim():
 # prepare_tracers_data(source_file, file_type_token)
 
 def textufy_dwarfgal ():
-    dimensions = [ ["x", "linear", "HQ"], ["y", "linear", "HQ"], ["z", "linear", "HQ"], ["rho", "log", "LQ"] ]
+    dimensions = [ ["x", "linear", "HQ"], ["y", "linear", "HQ"], ["z", "linear", "HQ"], ["rho", "log", "LQ"], ["vol", "log", "LQ"], ["bx", "linear", "LQ"], ["by", "linear", "LQ"], ["bz", "linear", "LQ"], ["vx", "linear", "LQ"], ["vy", "linear", "LQ"], ["vz", "linear", "LQ"] ]
     
-    source_file = "./data/dwarfgal/1-frame/data_for_alex.npy"
+    source_file = "./data/dwarfgal/1-frame/data_for_alex_xyzrhovolbxbybzvxvyvz.npy"
     file_type_token = "NUMPY"
     dest_path = "dwarfgal/1-frame/"
-    dest_file_name = "dwarfgal-xyzrho"
-    minmaxs = [ [-2.5, 2.5], [-2.5, 2.5], [-2.5, 2.5], [-1, 10] ]
+    dest_file_name = "dwarfgal-xyzrhovolbxbybzvxvyvz"
+    minmaxs = [ [-2.5, 2.5], [-2.5, 2.5], [-2.5, 2.5], [-1, 10], [-9, 3], [-600, 600], [-600, 600], [-600, 600], [-500, 500], [-500, 500], [-500, 500] ]
     testing_density = 1/1 # 1/1 is full rendering
-    nb_logs = 10
+    nb_logs = 15
     skip_scanning = False
 
     sph_textufy(source_file, file_type_token, dest_path, dest_file_name, dimensions, minmaxs, testing_density, nb_logs, skip_scanning)

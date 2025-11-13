@@ -353,13 +353,21 @@ def klodufy (source_file, file_type_token, size, dimensions, minmaxs, quality, d
     print("File " + dest_file_name + ".asset was created")
 
 # Count points in pointcloud to create 3D texture (voxel cloud), or add their density
-def klodufy_txt (source_file, size, source_min, source_max, quality, dest_path, dest_file_name, testing_density):
+def klodufy_txt (source_file, size, source_xyz_min, source_xyz_max, quality, dest_path, dest_file_name, testing_density, nb_logs):
+    
+    # Testing mode inits (the generated cube always has a dimension of size³ regardless of testing density
+    testing_density = min(1, testing_density) # Make sure it don't go krazy (> 1)
+    testing_value = round(1/testing_density)
+    
     arr = np.loadtxt(source_file)
     leng = arr.shape[0]
+    actual_count = math.floor(leng * testing_density)
     total_size = size * size * size
+    
     #print("Source data shape is " + str(arr.shape))
+    log_ratio = "all of " if testing_value == 1 else ("1 in " + str(testing_value) + " of all ")
     print("Source row count: " + str(leng))
-    print("Output cube size: " + str(size) + "³ = " + str(total_size))
+    print("Browsing " + log_ratio + str(leng) + " (== " + str(actual_count) + ") points to generate Unity Texture3D file " + dest_file_name + ".txt of cube size " + str(size) + "³ = " + str(total_size) + "...")
     
     # Init empty 3D texture
     klodu = []
@@ -368,37 +376,38 @@ def klodufy_txt (source_file, size, source_min, source_max, quality, dest_path, 
         klodu.append(0)
     
     # Prepare export file
-    file_name = "klo-" + str(size) + "-logsum-001"
-    destination_file = open("output/" + file_name + ".asset", "w")
+    dest_file_name = dest_file_name + ("-HQ" if quality == "high" else "-LQ")
+    destination_file = open("output/" + dest_path + dest_file_name + ".asset", "w")
     
     # Generate Unity header
     base_size = size
     dimensionality = 1
-    write_unity_header(destination_file, file_name, base_size, testing_density, dimensionality)
+    write_unity_header(destination_file, dest_file_name, base_size, testing_density, dimensionality, quality)
     
     # Set max resolution for hex values
-    max_resolution = 65536 - 1 # 2^16, starts at 0
+    max_resolution = (65536 - 1) if (quality == "high") else (256 - 1)
     
     # Loop into source data, find nearest voxel and increment its intensity
     # Also detect max value
     max_value = 0
-    for i in range(0, leng):
-        line = arr[i]
+    step = math.floor(testing_value)
+    ii = 0
+    for i in range(0, actual_count):
+        ii = i * step
+        line = arr[ii]
         x = line[0]
         y = line[1]
         z = line[2]
         v = line[3]
-        xx = remap(x, source_min, source_max, 0, 1, False)
-        yy = remap(y, source_min, source_max, 0, 1, False)
-        zz = remap(z, source_min, source_max, 0, 1, False)
+        xx = remap(x, source_xyz_min, source_xyz_max, 0, 1, False)
+        yy = remap(y, source_xyz_min, source_xyz_max, 0, 1, False)
+        zz = remap(z, source_xyz_min, source_xyz_max, 0, 1, False)
         vv = v
         
         # Get voxel index from remapped source position
-        ix = xx / voxel_size
-        fix = int(ix) # floor
+        fix = int(xx / voxel_size) # floor
         fiy = int(yy  / voxel_size)
         fiz = int(zz / voxel_size)
-        #print("x is " + str(x) + ", xx is " + str(xx) + ", ix is " + str(ix) + ", fix is " + str(fix))
         
         #print("klodu target indexes are (" + str(fix) + ", " + str(fiy) + ", " + str(fiz) + ")")
         
@@ -407,7 +416,7 @@ def klodufy_txt (source_file, size, source_min, source_max, quality, dest_path, 
         ky = fiy * size
         kz = fiz * size * size
         k = kx + ky + kz
-        klodu[k] += 10**(vv + 15)
+        klodu[k] += 1 # 10**(vv + 15)
         
         if (klodu[k] > max_value):
             max_value = klodu[k]
@@ -425,9 +434,9 @@ def klodufy_txt (source_file, size, source_min, source_max, quality, dest_path, 
         destination_file.write(str(hex_value))
         
         # Print out some values while waiting...
-        if (j % int(len(klodu)/60) == 0):
+        if (j % int(len(klodu)/nb_logs) == 0):
             #print(str(klodu[j]) + " " + str(max_value) + " " + str(max_resolution))
-            print(str(j) + "th value is: " + str(hex_value) + " (" + str(100 * klodu[j] / max_resolution) + "% of max intensity)")
+            print(str(j + 1) + "th value is: " + str(hex_value) + " (" + str(100 * klodu[j] / max_resolution) + "% of max intensity)")
     
     # Now... time to smooth values by looking at neighbours...
     # Coming soon...
@@ -440,12 +449,17 @@ def klodufy_txt (source_file, size, source_min, source_max, quality, dest_path, 
 
 # Klodufy already cleaned Dwarfgal file (WIP)
 def klodufy_txt_dwarfgal ():
-    source_file_name = "./output/dwarfgal/1-frame/dwarfgal-xyzrho.txt"
-    size = 10
-    source_min = 0
-    source_max = 1000000
-    testing_density = 1/100 # Doesn't work yet
-    klodufy_txt(source_file_name, size, source_min, source_max, testing_density)
+    source_file = "./output/dwarfgal/1-frame/dwarfgal-xyzrho.txt"
+    size = 70
+    source_xyz_min = 0
+    source_xyz_max = 1000000
+    quality = "low"
+    dest_path = "dwarfgal/1-frame/"
+    dest_file_name = "klo-dwarfgal-" + str(size)
+    testing_density = 1/1
+    nb_logs = 12
+    
+    klodufy_txt(source_file, size, source_xyz_min, source_xyz_max, quality, dest_path, dest_file_name, testing_density, nb_logs)
 # klodufy_txt_dwarfgal()
 
 # Klodufy (voxelize) already cleaned Commerc bifluid file
@@ -531,30 +545,33 @@ def klodufy_dustyturb_rhov_anim_frame (frame, index):
     print("Index " + str(index))
     
     frame_nb = prepend_zeros(str(index), 5)
-    source_file = "./data/dustyturb/134-frames-rhov/cube_output_" + str(frame_nb) + ".dat"
+    source_file = "./data/dustyturb/524-frames-rhov/cube_output_" + str(frame_nb) + ".dat"
     file_type_token = "DAT"
     size = 256
     dimensions = [ ["rho", "log"], ["v", "linear"] ]
-    quality = "high"
+    quality = "low"
     minmaxs = [ [-2, 6], [0, 600] ]
     
     testing_density = 1/1 # 1/1 is full rendering
     nb_logs = 2
     
-    dest_path = "dustyturb/134-frames-rhov/"
+    dest_path = "dustyturb/524-frames-rhov/"
     dest_file_name = "klo-dustyturb-256-rhov-anim-" + prepend_zeros(str(index), 3)
     skip_scanning = True
     
     klodufy(source_file, file_type_token, size, dimensions, minmaxs, quality, dest_path, dest_file_name, testing_density, nb_logs, skip_scanning)
 
-def klodufy_dustyturb_rhov_full_134_anim ():
-    print("Generating 134 animation frames with density & velocities (134 klodus in total)...")
+def klodufy_dustyturb_rhov_full_anim ():
+    start = 251
+    end = 275
+    diff = end - start
+    print("Generating " + str(diff) + " animation frames with density & velocities...")
     
-    for f in range(101, 134 + 1):
+    for f in range(start, end + 1):
         klodufy_dustyturb_rhov_anim_frame(f, f)
         
-    print("Generated 134 Dustyturb RhoV animation frames.")
-klodufy_dustyturb_rhov_full_134_anim()
+    print("Generated " + str(diff) + " Dustyturb RhoV animation frames.")
+klodufy_dustyturb_rhov_full_anim()
 
 def klodufy_giantclouds_rho ():
     source_file = "./data/giantclouds_00185_rho.dat"
