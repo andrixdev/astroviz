@@ -562,8 +562,8 @@ def klodufy_dustyturb_rhov_anim_frame (frame, index):
     klodufy(source_file, file_type_token, size, dimensions, minmaxs, quality, dest_path, dest_file_name, testing_density, nb_logs, skip_scanning)
 
 def klodufy_dustyturb_rhov_full_anim ():
-    start = 251
-    end = 275
+    start = 501
+    end = 524
     diff = end - start
     print("Generating " + str(diff) + " animation frames with density & velocities...")
     

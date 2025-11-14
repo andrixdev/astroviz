@@ -296,4 +296,19 @@ def textufy_dwarfgal ():
     skip_scanning = False
 
     sph_textufy(source_file, file_type_token, dest_path, dest_file_name, dimensions, minmaxs, testing_density, nb_logs, skip_scanning)
-textufy_dwarfgal()
+# textufy_dwarfgal()
+
+source_file = "./data/zoomin/rdr_00629_l20.hydro"
+arr = np.loadtxt(source_file)
+leng = arr.shape[0]
+print(leng)
+print(arr[0])
+print(arr[1])
+print(arr[2])
+print(arr[3])
+print(arr[4])
+print(arr[5])
+print(arr[6])
+print(arr[7])
+print(arr[8])
+    
