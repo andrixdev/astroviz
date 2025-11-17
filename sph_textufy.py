@@ -33,7 +33,14 @@ def prepare_tracers_data (source_file, file_type_token):
         return sdf
         
     elif (file_type_token == "NUMPY"):
-        data = data = np.load(source_file)
+        data = np.load(source_file)
+        
+        print("Data shape is " + str(data.shape) + " with a total of " + str(data.size) + " elements.")
+        
+        return data
+        
+    elif (file_type_token == "TXT"):
+        data = arr = np.loadtxt(source_file)
         
         print("Data shape is " + str(data.shape) + " with a total of " + str(data.size) + " elements.")
         
@@ -64,7 +71,7 @@ def remap (input, source_min, source_max, target_min, target_max, clamp_mode):
         return target_min + (target_max - target_min) * (input - source_min) / (source_max - source_min)
 
 # Read SPH tracers particles data
-def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, dimensions, minmaxs, testing_density, nb_logs, skip_scanning):
+def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, dimensions, kept_dimensions, minmaxs, testing_density, nb_logs, skip_scanning, only_scanning):
     
     # Testing mode inits
     testing_density = min(1, testing_density) # Make sure it don't go krazy (> 1)
@@ -86,7 +93,7 @@ def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, dimens
     actual_count = math.floor(count * testing_density)
     
     log_ratio = "all of " if testing_value == 1 else ("1 in " + str(testing_value) + " of all ")
-    print("Writing " + log_ratio + str(count) + " (== " + str(actual_count) + ") text rows to " + dest_file_name + ".txt...")
+    print("Processing " + log_ratio + str(count) + " (== " + str(actual_count) + ") text rows to " + dest_file_name + ".txt...")
     
     step = math.floor(testing_value)
     
@@ -120,8 +127,8 @@ def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, dimens
                     else:
                         val = data.iloc[ii][dimension_name]
                         
-                # Grab data value Numpy way (just the order)
-                elif (file_type_token == "NUMPY"):
+                # Grab data value basic way (just the order)
+                elif (file_type_token == "NUMPY" or file_type_token == "TXT"):
                     val = data[ii][d]
                     
                 # Checking mode
@@ -156,66 +163,70 @@ def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, dimens
         # Log scanning time
         mid_time = datetime.datetime.now()
         delta = mid_time.timestamp() - start_time.timestamp()
-        print("Scanned and mapped data in: " + str(round(delta, 2)) + " seconds.")
+        print("Scanned data in: " + str(round(delta, 2)) + " seconds.")
     
     # LOOP 2: remap & write
-    for j in range(0, actual_count):
-        jj = j * step
-        
-        row = ""
-        
-        # Prepare remap
-        low_quality_digits = 3
-        high_quality_digits = 6
-        lq_max = 10 ** low_quality_digits
-        hq_max = 10 ** high_quality_digits
-        
-        for d in range(0, dims):
-            dimension_name = dimensions[d][0]
-            dimension_mode = dimensions[d][1]
-            dimension_quality = dimensions[d][2]
-            digits = low_quality_digits if (dimension_quality == "LQ") else high_quality_digits
+    if (not only_scanning):
+        for j in range(0, actual_count):
+            jj = j * step
             
-            # Grab data value Shamrock way (dimension name)
-            if (file_type_token == "SHAMROCK"):
-                # Special case for Yona's rho, derived from hpart
-                if (dimension_name == "rho"):
-                    val = 1 * (data.iloc[jj]["hpart"] ** 3)
-                else:
-                    val = data.iloc[jj][dimension_name]
-                    
-            # Grab data value Numpy way (just the order)
-            elif (file_type_token == "NUMPY"):
-                val = data[jj][d]
+            row = ""
+            
+            # Prepare remap
+            low_quality_digits = 3
+            high_quality_digits = 6
+            lq_max = 10 ** low_quality_digits
+            hq_max = 10 ** high_quality_digits
+            
+            for d in range(0, dims):
+                dimension_name = dimensions[d][0]
+                dimension_mode = dimensions[d][1]
+                dimension_quality = dimensions[d][2]
+                is_dimension_kept = True if (kept_dimensions[d] == 1) else False
                 
-            # Checking mode
-            if (dimension_mode == "log"):
-                val = math.log10(val)
-            
-            # Remap
-            min_val = minmaxs[d][0]
-            max_val = minmaxs[d][1]
-            min_target = 0
-            max_target = lq_max if (dimension_quality == "LQ") else hq_max
-            val = int(round_to_n(remap(val, min_val, max_val, min_target, max_target, True), digits + 1))
-            
-            # Feed row to later write to file
-            if (d > 0):
-                row = row + " "
-            row = row + str(val)
-            
-        if (j % max(1, int(round(actual_count/nb_logs))) == 0):
-            print(str(j) + "th remapped row is: " + row)
+                digits = low_quality_digits if (dimension_quality == "LQ") else high_quality_digits
+                
+                # Grab data value Shamrock way (dimension name)
+                if (file_type_token == "SHAMROCK"):
+                    # Special case for Yona's rho, derived from hpart
+                    if (dimension_name == "rho"):
+                        val = 1 * (data.iloc[jj]["hpart"] ** 3)
+                    else:
+                        val = data.iloc[jj][dimension_name]
+                        
+                # Grab data value basic way (just the order)
+                elif (file_type_token == "NUMPY" or file_type_token == "TXT"):
+                    val = data[jj][d]
+                    
+                # Checking mode
+                if (dimension_mode == "log"):
+                    val = math.log10(val)
+                
+                # Remap
+                min_val = minmaxs[d][0]
+                max_val = minmaxs[d][1]
+                min_target = 0
+                max_target = lq_max if (dimension_quality == "LQ") else hq_max
+                val = int(round_to_n(remap(val, min_val, max_val, min_target, max_target, True), digits + 1))
+                
+                # Feed row to later write to file
+                if (is_dimension_kept):
+                    if (d > 0):
+                        row = row + " "
+                    row = row + str(val)
+                
+            if (j % max(1, int(round(actual_count/nb_logs))) == 0):
+                print(str(j) + "th remapped row is: " + row)
 
-        if (j < actual_count - 1):
-            row += "\n"
-            
-        destination_file.write(row)
-    
-    # Log normalizing time
-    end_time = datetime.datetime.now()
-    delta = end_time.timestamp() - (mid_time.timestamp() if (not skip_scanning) else start_time.timestamp())
-    print("Normalized data in: " + str(round(delta, 2)) + " seconds.")
+            if (j < actual_count - 1):
+                row += "\n"
+                
+            destination_file.write(row)
+        
+        # Log normalizing time
+        end_time = datetime.datetime.now()
+        delta = end_time.timestamp() - (mid_time.timestamp() if (not skip_scanning) else start_time.timestamp())
+        print("Normalized data in: " + str(round(delta, 2)) + " seconds.")
     
     # Conclude
     print("File " + dest_file_name + ".txt was created")
@@ -277,38 +288,64 @@ def sph_textufy_disktilt_full_99_anim():
     print("Generated 99 animation frames.")
 # sph_textufy_disktilt_full_99_anim()
 
+def textufy_dwarfgal_frame (frame, index):
+    print("Generatig frame " + str(frame) + " of index " + str(index))
+    
+    # dimensions = [ ["x", "linear", "HQ"], ["y", "linear", "HQ"], ["z", "linear", "HQ"], ["rho", "log", "LQ"], ["vol", "log", "LQ"], ["bx", "linear", "LQ"], ["by", "linear", "LQ"], ["bz", "linear", "LQ"], ["vx", "linear", "LQ"], ["vy", "linear", "LQ"], ["vz", "linear", "LQ"] ]
+    # source_file = "./data/dwarfgal/1-frame/data_for_alex_xyzrhovolbxbybzvxvyvz.npy"
+    # dest_file_name = "dwarfgal-xyzrhovolbxbybzvxvyvz"
+    # minmaxs = [ [-2.5, 2.5], [-2.5, 2.5], [-2.5, 2.5], [-1, 10], [-9, 3], [-600, 600], [-600, 600], [-600, 600], [-500, 500], [-500, 500], [-500, 500] ]
+    
+    dimensions = [ ["x", "linear", "HQ"], ["y", "linear", "HQ"], ["z", "linear", "HQ"], ["rho", "log", "LQ"], ["vol", "log", "LQ"] ]
+    
+    source_file = "./data/dwarfgal/100-frames/data_for_alex_" + str(frame) + ".npy"
+    file_type_token = "NUMPY"
+    dest_path = "dwarfgal/100-frames/"
+    output_index = prepend_zeros(index, 3)
+    dest_file_name = "dwarfgal-xyzrhovol-" + str(output_index)
+    minmaxs = [ [425, 575], [425, 575], [425, 575], [-1, 10], [-9, 5] ]
+    kept_dimensions = [1, 1, 1, 1, 1]
+    testing_density = 1/1 # 1/1 is full rendering
+    nb_logs = 3
+    skip_scanning = False
+    only_scanning = False
+
+    sph_textufy(source_file, file_type_token, dest_path, dest_file_name, dimensions, kept_dimensions, minmaxs, testing_density, nb_logs, skip_scanning, only_scanning)
+def textufy_dwarfgal_full_100_anim():
+    print("Generating 100 animation frames with positions and rho...")
+    
+    i = 0
+    for f in range(1250, 1349 + 1):
+        i = i + 1
+        textufy_dwarfgal_frame(f, i)
+        
+    print("Generated 100 animation frames.")
+# textufy_dwarfgal_full_100_anim()
+
+def textufy_zoomin ():
+    # x y z (kpc) vx vy vz (km/s) rho (H) level mass (H + He) temp, level : level of refinement (12 (7min)->20), 8 volume scale between two levels
+    
+    dimensions = [ ["x", "linear", "HQ"], ["y", "linear", "HQ"], ["z", "linear", "HQ"], ["vx", "linear", "LQ"], ["vy", "linear", "LQ"], ["vz", "linear", "LQ"], ["rho", "log", "LQ"], ["level", "linear", "LQ"], ["mass", "linear", "LQ"], ["temp", "linear", "LQ"] ]
+    kept_dimensions = [ 1, 1, 1, 1, 1, 1, 1, 1, 0, 0 ]
+    
+    # source_file = "./data/zoomin/zoomin-dummy.txt"
+    source_file = "./data/zoomin/rdr_00629_l20.hydro"
+    file_type_token = "TXT"
+    dest_path = "zoomin/1-frame/"
+    dest_file_name = "zoomin-xyzvxvyvzrholvl"
+    minmaxs = [ [2.4, 3.1], [-1.3, -0.5], [-0.4, 0.4], [-100, 250], [150, 500], [-200, 200], [-4, 9], [13, 21], [0, 4000], [0, 10000000] ]
+    testing_density = 1/1 # 1/1 is full rendering
+    nb_logs = 15
+    skip_scanning = True
+    only_scanning = False
+    
+    sph_textufy(source_file, file_type_token, dest_path, dest_file_name, dimensions, kept_dimensions, minmaxs, testing_density, nb_logs, skip_scanning, only_scanning)
+textufy_zoomin()
+
+
+
 # source_file = "./data/binarydisk/binarydisk_orb0m02gprev_00100"
 # file_type_token = "PHANTOM"
 # dest_path = ""
 # dest_file_name = "sph-binarydisk"
 # prepare_tracers_data(source_file, file_type_token)
-
-def textufy_dwarfgal ():
-    dimensions = [ ["x", "linear", "HQ"], ["y", "linear", "HQ"], ["z", "linear", "HQ"], ["rho", "log", "LQ"], ["vol", "log", "LQ"], ["bx", "linear", "LQ"], ["by", "linear", "LQ"], ["bz", "linear", "LQ"], ["vx", "linear", "LQ"], ["vy", "linear", "LQ"], ["vz", "linear", "LQ"] ]
-    
-    source_file = "./data/dwarfgal/1-frame/data_for_alex_xyzrhovolbxbybzvxvyvz.npy"
-    file_type_token = "NUMPY"
-    dest_path = "dwarfgal/1-frame/"
-    dest_file_name = "dwarfgal-xyzrhovolbxbybzvxvyvz"
-    minmaxs = [ [-2.5, 2.5], [-2.5, 2.5], [-2.5, 2.5], [-1, 10], [-9, 3], [-600, 600], [-600, 600], [-600, 600], [-500, 500], [-500, 500], [-500, 500] ]
-    testing_density = 1/1 # 1/1 is full rendering
-    nb_logs = 15
-    skip_scanning = False
-
-    sph_textufy(source_file, file_type_token, dest_path, dest_file_name, dimensions, minmaxs, testing_density, nb_logs, skip_scanning)
-# textufy_dwarfgal()
-
-source_file = "./data/zoomin/rdr_00629_l20.hydro"
-arr = np.loadtxt(source_file)
-leng = arr.shape[0]
-print(leng)
-print(arr[0])
-print(arr[1])
-print(arr[2])
-print(arr[3])
-print(arr[4])
-print(arr[5])
-print(arr[6])
-print(arr[7])
-print(arr[8])
-    

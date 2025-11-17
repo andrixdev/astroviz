@@ -571,7 +571,7 @@ def klodufy_dustyturb_rhov_full_anim ():
         klodufy_dustyturb_rhov_anim_frame(f, f)
         
     print("Generated " + str(diff) + " Dustyturb RhoV animation frames.")
-klodufy_dustyturb_rhov_full_anim()
+# klodufy_dustyturb_rhov_full_anim()
 
 def klodufy_giantclouds_rho ():
     source_file = "./data/giantclouds_00185_rho.dat"
