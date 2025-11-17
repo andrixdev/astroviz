@@ -334,13 +334,13 @@ def textufy_zoomin ():
     dest_path = "zoomin/1-frame/"
     dest_file_name = "zoomin-xyzvxvyvzrholvl"
     minmaxs = [ [2.4, 3.1], [-1.3, -0.5], [-0.4, 0.4], [-100, 250], [150, 500], [-200, 200], [-4, 9], [13, 21], [0, 4000], [0, 10000000] ]
-    testing_density = 1/1 # 1/1 is full rendering
+    testing_density = 1/3 # 1/1 is full rendering
     nb_logs = 15
     skip_scanning = True
     only_scanning = False
     
     sph_textufy(source_file, file_type_token, dest_path, dest_file_name, dimensions, kept_dimensions, minmaxs, testing_density, nb_logs, skip_scanning, only_scanning)
-textufy_zoomin()
+# textufy_zoomin()
 
 
 

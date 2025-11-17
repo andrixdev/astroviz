@@ -184,7 +184,7 @@ def prepare_data_cube (source_file, file_type_token, dimensionality):
         print("[prepare_data_cube(...)] Unknown file type token: " + file_type_token)
         
         return False
-    
+
 # Create Unity 3D texture out of data cube
 # input dataset should include xyz
 # 'dimensionality' of 1 generates a 3D texture with "R" signel channel
@@ -257,7 +257,11 @@ def klodufy (source_file, file_type_token, size, dimensions, minmaxs, quality, d
                         dimension_name = dimensions[d][0]
                         dimension_mode = dimensions[d][1]
                         
-                        val = data[aa][bb][cc][d]
+                        # Grab data
+                        if (dimensionality == 1):
+                            val = data[aa][bb][cc]
+                        else:
+                            data[aa][bb][cc][d]
                         
                         if (dimension_mode == "log"):
                             val = math.log10(val)
@@ -316,7 +320,10 @@ def klodufy (source_file, file_type_token, size, dimensions, minmaxs, quality, d
                     dimension_mode = dimensions[d][1]
                     
                     # Grab data
-                    val = data[aa][bb][cc][d]
+                    if (dimensionality == 1):
+                        val = data[aa][bb][cc]
+                    else:
+                        data[aa][bb][cc][d]
                     
                     # Checking mode
                     if (dimension_mode == "log"):
@@ -447,31 +454,18 @@ def klodufy_txt (source_file, size, source_xyz_min, source_xyz_max, quality, des
     
     print("Done!")
 
-# Klodufy already cleaned Dwarfgal file (WIP)
-def klodufy_txt_dwarfgal ():
-    source_file = "./output/dwarfgal/1-frame/dwarfgal-xyzrho.txt"
-    size = 70
-    source_xyz_min = 0
-    source_xyz_max = 1000000
-    quality = "low"
-    dest_path = "dwarfgal/1-frame/"
-    dest_file_name = "klo-dwarfgal-" + str(size)
-    testing_density = 1/1
-    nb_logs = 12
-    
-    klodufy_txt(source_file, size, source_xyz_min, source_xyz_max, quality, dest_path, dest_file_name, testing_density, nb_logs)
-# klodufy_txt_dwarfgal()
-
+# OBSOLETE
 # Klodufy (voxelize) already cleaned Commerc bifluid file
 def klodufy_txt_bifluid ():
     source_file_name = "./data/bifluid_bin1_00045_clean3.txt"
     size = 10
     source_min = 0
     source_max = 4
-    testing_density = 1/1 # Doesn't work yet
+    testing_density = 1/1
     klodufy_txt(source_file_name, size, source_min, source_max, testing_density)
 # klodufy_txt_bifluid()
 
+# OBSOLETE
 def klodufy_brownie_B_intensity ():
     source_file = "./data/brownie_B_field_stack_01863.npy"
     file_type_token = "NUMPY"
@@ -489,6 +483,7 @@ def klodufy_brownie_B_intensity ():
     klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
 # klodufy_brownie_B_intensity()
 
+# OBSOLETE
 def klodufy_brownie_B_vectors ():
     source_file = "./data/brownie_B_field_vector_stack_01863.npy"
     file_type_token = "NUMPY"
@@ -506,6 +501,7 @@ def klodufy_brownie_B_vectors ():
     klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
 # klodufy_brownie_B_vectors()
 
+# OBSOLETE
 def klodufy_dustyturb_density_numpy (): # Buggy or disordered outputs
     source_file = "./data/dustyturb_density_reshaped_00524.npy"
     file_type_token = "NUMPY"
@@ -523,6 +519,7 @@ def klodufy_dustyturb_density_numpy (): # Buggy or disordered outputs
     klodufy(source_file, file_type_token, size, dimensionality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val, max_rez)
 # klodufy_dustyturb_density_numpy()
 
+# OBSOLETE
 def klodufy_dustyturb_density ():
     source_file = "./data/dustyturb_data.dat"
     file_type_token = "DAT"
@@ -560,7 +557,6 @@ def klodufy_dustyturb_rhov_anim_frame (frame, index):
     skip_scanning = True
     
     klodufy(source_file, file_type_token, size, dimensions, minmaxs, quality, dest_path, dest_file_name, testing_density, nb_logs, skip_scanning)
-
 def klodufy_dustyturb_rhov_full_anim ():
     start = 501
     end = 524
@@ -573,6 +569,7 @@ def klodufy_dustyturb_rhov_full_anim ():
     print("Generated " + str(diff) + " Dustyturb RhoV animation frames.")
 # klodufy_dustyturb_rhov_full_anim()
 
+# OBSOLETE
 def klodufy_giantclouds_rho ():
     source_file = "./data/giantclouds_00185_rho.dat"
     file_type_token = "DAT"
@@ -589,7 +586,6 @@ def klodufy_giantclouds_rho ():
     max_val = 3
     klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
 # klodufy_giantclouds_rho()
-
 def klodufy_giantclouds_rhovx ():
     source_file = "./data/giantclouds_00185_rhovx.dat"
     file_type_token = "DAT"
@@ -607,6 +603,7 @@ def klodufy_giantclouds_rhovx ():
     klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
 # klodufy_giantclouds_rhovx()
 
+# OBSOLETE
 def klodufy_tidalstrip_density ():
     source_file = "./data/tidalstrip/tidalstrip_00236_density.map" # Tidalstrip .map (same as Giantcloud .dat under the hood)
     file_type_token = "DAT"
@@ -623,7 +620,6 @@ def klodufy_tidalstrip_density ():
     dest_file_name = "klo-tidalstrip-00236-512-density"
     klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
 # klodufy_tidalstrip_density()
-
 def klodufy_tidalstrip_vx ():
     source_file = "./data/tidalstrip/tidalstrip_00236_vx.dat"
     file_type_token = "DAT"
@@ -641,6 +637,7 @@ def klodufy_tidalstrip_vx ():
     klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
 # klodufy_tidalstrip_vx()
 
+# OBSOLETE
 def klodufy_outflow (source_file, file_type_token, quality, variables_index, size, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3):
     # variables_index == 1 -> x, y, z
     # variables_index == 2 -> vx, vy, vz
@@ -801,7 +798,6 @@ def klodufy_outflow (source_file, file_type_token, quality, variables_index, siz
     
     # Conclude
     print("File " + dest_file_name + ".asset was created")
-
 def klodufy_outflow_values (zoom, variables_index, quality, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3, logarithmic_mode):
     file_type_token = "NUMPY"
     size = 256
@@ -812,7 +808,6 @@ def klodufy_outflow_values (zoom, variables_index, quality, min_v1, max_v1, min_
     dest_path = ""
     dest_file_name = "klo-outflow-" +  str(zoom) + "-var" + str(variables_index)
     klodufy_outflow(source_file, file_type_token, quality, variables_index, size, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_v1, max_v1, min_v2, max_v2, min_v3, max_v3)
-
 def klodufy_outflow_8000au_positions ():
     zoom = 8000
     variables_index = 1
@@ -982,38 +977,7 @@ def klodufy_outflow_100au_rho_cr ():
 # klodufy_outflow_100au_B_vectors()
 # klodufy_outflow_100au_rho_cr()
 
-def klodufy_tidalstrip_anim_vel (frame, vel_type):
-    file_end = tidal_frame_to_file_end(frame)
-    source_file = "./data/tidalstrip/tidal_" + vel_type + "_128_" + file_end + ".dat"
-    file_type_token = "DAT"
-    size = 128
-    dimensionality = 1
-    quality = "low"
-    rounding_mode = False
-    logarithmic_mode = False
-    testing_density = 1/1 # 1/1 is full rendering
-    nb_logs = 8
-    min_val = -5
-    max_val = 5
-    dest_path = "tidalstrip/5-frames/"
-    dest_file_name = "klo-tidal-" + vel_type + "-128-anim-" + str(frame)
-    klodufy(source_file, file_type_token, size, dimensionality, quality, dest_path, dest_file_name, rounding_mode, logarithmic_mode, testing_density, nb_logs, min_val, max_val)
-# klodufy_tidalstrip_anim_vel(1, "vx")
-# klodufy_tidalstrip_anim_vel(2, "vx")
-# klodufy_tidalstrip_anim_vel(3, "vx")
-# klodufy_tidalstrip_anim_vel(4, "vx")
-# klodufy_tidalstrip_anim_vel(5, "vx")
-# klodufy_tidalstrip_anim_vel(1, "vy")
-# klodufy_tidalstrip_anim_vel(2, "vy")
-# klodufy_tidalstrip_anim_vel(3, "vy")
-# klodufy_tidalstrip_anim_vel(4, "vy")
-# klodufy_tidalstrip_anim_vel(5, "vy")
-# klodufy_tidalstrip_anim_vel(1, "vz")
-# klodufy_tidalstrip_anim_vel(2, "vz")
-# klodufy_tidalstrip_anim_vel(3, "vz")
-# klodufy_tidalstrip_anim_vel(4, "vz")
-# klodufy_tidalstrip_anim_vel(5, "vz")
-
+# OBSOLETE
 def klodufy_tidalstrip_anim_frame (frame, index, type):
     print("Frame " + str(frame))
     print("Index " + str(index))
@@ -1068,6 +1032,7 @@ def klodufy_tidalstrip_full_46_anim ():
     print("Generated " + str(size) + " animation frames.")
 # klodufy_tidalstrip_full_46_anim()
 
+# OBSOLETE
 def klodufy_giantclouds_anim_frame (frame, index, type):
     print("Frame " + str(frame))
     print("Index " + str(index))
@@ -1099,6 +1064,7 @@ def klodufy_giantclouds_full_37_anim ():
     print("Generated 37 animation frames.")
 # klodufy_giantclouds_full_37_anim()
 
+# OBSOLETE
 def klodufy_dustyturb_anim_frame (frame, index, type):
     print("Frame " + str(frame))
     print("Index " + str(index))
@@ -1129,3 +1095,48 @@ def klodufy_dustyturb_full_XX_anim ():
         
     print("Generated X animation frames.")
 # klodufy_dustyturb_full_XX_anim()
+
+# Klodufy already cleaned Dwarfgal file
+def klodufy_txt_dwarfgal ():
+    source_file = "./output/dwarfgal/1-frame/dwarfgal-xyzrho.txt"
+    size = 70
+    source_xyz_min = 0
+    source_xyz_max = 1000000
+    quality = "low"
+    dest_path = "dwarfgal/1-frame/"
+    dest_file_name = "klo-dwarfgal-" + str(size)
+    testing_density = 1/1
+    nb_logs = 12
+    
+    klodufy_txt(source_file, size, source_xyz_min, source_xyz_max, quality, dest_path, dest_file_name, testing_density, nb_logs)
+# klodufy_txt_dwarfgal()
+
+def klodufy_youngdisk_frame (frame, index):
+    frame = prepend_zeros(str(frame), 5)
+    index = prepend_zeros(str(index), 4)
+    source_file = "./data/youngdisk/1864-frames/ang_mom_stack_" + str(frame) + ".npy"
+    file_type_token = "NUMPY"
+    size = 137
+    dimensions = [ ["rho", "log"] ]
+    minmaxs = [ [-18, -10] ]
+    quality = "low"
+    dest_path = "youngdisk/1864-frames/"
+    dest_file_name = "klo-youngdisk-137-rho-" + str(index)
+    testing_density = 1/1
+    nb_logs = 1
+    skip_scanning = False
+    
+    klodufy (source_file, file_type_token, size, dimensions, minmaxs, quality, dest_path, dest_file_name, testing_density, nb_logs, skip_scanning)
+def klodufy_youngdisk_full_anim():
+    start_index = 1058
+    end_index = 1257
+    diff = end_index - start_index
+    print("Generating " + str(diff) + " animation frames with density data...")
+    
+    i = start_index - 58
+    for f in range(start_index, end_index + 1):
+        i = i + 1
+        klodufy_youngdisk_frame(f, i)
+        
+    print("Generated " + str(diff) + " animation frames.")
+klodufy_youngdisk_full_anim()
