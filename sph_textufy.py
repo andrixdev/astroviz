@@ -21,7 +21,7 @@ def prepare_tracers_data (source_file, file_type_token):
     if (file_type_token == "PHANTOM"):
         sdf, sdf_sinks = sarracen.read_phantom(source_file)
         
-        print(sdf.describe())
+        # print(sdf.describe())
         
         return sdf
         
@@ -119,17 +119,21 @@ def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, dimens
                 dimension_name = dimensions[d][0]
                 dimension_mode = dimensions[d][1]
                 
-                # Grab data value Shamrock way (dimension name)
+                # Grab data value Shamrock/Phantom way (dimension name)
                 if (file_type_token == "SHAMROCK"):
                     # Special case for Yona's rho, derived from hpart
                     if (dimension_name == "rho"):
                         val = 1 * (data.iloc[ii]["hpart"] ** 3)
                     else:
                         val = data.iloc[ii][dimension_name]
-                        
+                
+                elif (file_type_token == "PHANTOM"):
+                    val = data.iloc[ii][dimension_name]
+                    
                 # Grab data value basic way (just the order)
                 elif (file_type_token == "NUMPY" or file_type_token == "TXT"):
                     val = data[ii][d]
+                    
                     
                 # Checking mode
                 if (dimension_mode == "log"):
@@ -186,7 +190,7 @@ def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, dimens
                 
                 digits = low_quality_digits if (dimension_quality == "LQ") else high_quality_digits
                 
-                # Grab data value Shamrock way (dimension name)
+                # Grab data value Shamrock/Phantom way (dimension name)
                 if (file_type_token == "SHAMROCK"):
                     # Special case for Yona's rho, derived from hpart
                     if (dimension_name == "rho"):
@@ -194,6 +198,10 @@ def sph_textufy (source_file, file_type_token, dest_path, dest_file_name, dimens
                     else:
                         val = data.iloc[jj][dimension_name]
                         
+                        
+                elif (file_type_token == "PHANTOM"):
+                    val = data.iloc[jj][dimension_name]
+                    
                 # Grab data value basic way (just the order)
                 elif (file_type_token == "NUMPY" or file_type_token == "TXT"):
                     val = data[jj][d]
@@ -282,7 +290,7 @@ def sph_textufy_disktilt_frame (frame, index):
 def sph_textufy_disktilt_full_99_anim():
     print("Generating 99 sph animation frames with positions...")
     
-    for f in range(0, 99):
+    for f in range(0, 98 + 1):
         sph_textufy_disktilt_frame(f, f)
         
     print("Generated 99 animation frames.")
@@ -342,10 +350,41 @@ def textufy_zoomin ():
     sph_textufy(source_file, file_type_token, dest_path, dest_file_name, dimensions, kept_dimensions, minmaxs, testing_density, nb_logs, skip_scanning, only_scanning)
 # textufy_zoomin()
 
+def textufy_binarydisk_frame (frame, index):
+    # Multiple of 10 index
+    if (frame % 10 == 0):
+        dimensions = [ ["x", "linear", "HQ"], ["y", "linear", "HQ"], ["z", "linear", "HQ"], ["vx", "linear", "LQ"], ["vy", "linear", "LQ"], ["vz", "linear", "LQ"], ["h", "log", "LQ"], ["divv", "linear", "LQ"], ["dt", "linear", "LQ"] ]
+        kept_dimensions = [ 1, 1, 1, 0, 0, 0, 1, 0, 0 ]
+        minmaxs = [ [-2000, 2000], [-2000, 2000], [-2000, 2000], [-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-3, 4], [-10000, 10000], [0, 1000] ]
+    else:
+        # Other
+        dimensions = [ ["x", "linear", "HQ"], ["y", "linear", "HQ"], ["z", "linear", "HQ"], ["h", "log", "LQ"] ]
+        kept_dimensions = [ 1, 1, 1, 1 ]
+        minmaxs = [ [-2000, 2000], [-2000, 2000], [-2000, 2000], [-3, 4] ]
+        
+    frame = prepend_zeros(str(frame), 5)
+    index = prepend_zeros(str(index), 3)
+    source_file = "./data/binarydisk/102-frames/orb0m02gprev_" + str(frame)
+    file_type_token = "PHANTOM"
+    dest_path = "binarydisk/102-frames/"
+    dest_file_name = "sph-binarydisk-" + str(index)
+    testing_density = 1/1 # 1/1 is full rendering
+    nb_logs = 2
+    skip_scanning = True
+    only_scanning = False
+    
+    sph_textufy(source_file, file_type_token, dest_path, dest_file_name, dimensions, kept_dimensions, minmaxs, testing_density, nb_logs, skip_scanning, only_scanning)
 
-
-# source_file = "./data/binarydisk/binarydisk_orb0m02gprev_00100"
-# file_type_token = "PHANTOM"
-# dest_path = ""
-# dest_file_name = "sph-binarydisk"
-# prepare_tracers_data(source_file, file_type_token)
+def textufy_binarydisk_full_102_anim():
+    start_index = 0
+    end_index = 101
+    diff = end_index - start_index
+    print("Generating " + str(diff) + " animation frames with density data...")
+    
+    i = 0
+    for f in range(start_index, end_index + 1):
+        i = i + 1
+        textufy_binarydisk_frame(f, i)
+        
+    print("Generated " + str(diff + 1) + " animation frames.")
+textufy_binarydisk_full_102_anim()

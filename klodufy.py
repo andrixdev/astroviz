@@ -566,7 +566,7 @@ def klodufy_dustyturb_rhov_full_anim ():
     for f in range(start, end + 1):
         klodufy_dustyturb_rhov_anim_frame(f, f)
         
-    print("Generated " + str(diff) + " Dustyturb RhoV animation frames.")
+    print("Generated " + str(diff + 1) + " Dustyturb RhoV animation frames.")
 # klodufy_dustyturb_rhov_full_anim()
 
 # OBSOLETE
@@ -1128,8 +1128,8 @@ def klodufy_youngdisk_frame (frame, index):
     
     klodufy (source_file, file_type_token, size, dimensions, minmaxs, quality, dest_path, dest_file_name, testing_density, nb_logs, skip_scanning)
 def klodufy_youngdisk_full_anim():
-    start_index = 1058
-    end_index = 1257
+    start_index = 1558
+    end_index = 1857
     diff = end_index - start_index
     print("Generating " + str(diff) + " animation frames with density data...")
     
@@ -1138,5 +1138,5 @@ def klodufy_youngdisk_full_anim():
         i = i + 1
         klodufy_youngdisk_frame(f, i)
         
-    print("Generated " + str(diff) + " animation frames.")
+    print("Generated " + str(diff + 1) + " animation frames.")
 klodufy_youngdisk_full_anim()
