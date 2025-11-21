@@ -355,12 +355,12 @@ def textufy_binarydisk_frame (frame, index):
     if (frame % 10 == 0):
         dimensions = [ ["x", "linear", "HQ"], ["y", "linear", "HQ"], ["z", "linear", "HQ"], ["vx", "linear", "LQ"], ["vy", "linear", "LQ"], ["vz", "linear", "LQ"], ["h", "log", "LQ"], ["divv", "linear", "LQ"], ["dt", "linear", "LQ"] ]
         kept_dimensions = [ 1, 1, 1, 0, 0, 0, 1, 0, 0 ]
-        minmaxs = [ [-2000, 2000], [-2000, 2000], [-2000, 2000], [-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-3, 4], [-10000, 10000], [0, 1000] ]
+        minmaxs = [ [-200, 200], [-200, 200], [-200, 200], [-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-3, 4], [-10000, 10000], [0, 1000] ]
     else:
         # Other
         dimensions = [ ["x", "linear", "HQ"], ["y", "linear", "HQ"], ["z", "linear", "HQ"], ["h", "log", "LQ"] ]
         kept_dimensions = [ 1, 1, 1, 1 ]
-        minmaxs = [ [-2000, 2000], [-2000, 2000], [-2000, 2000], [-3, 4] ]
+        minmaxs = [ [-200, 200], [-200, 200], [-200, 200], [-3, 4] ]
         
     frame = prepend_zeros(str(frame), 5)
     index = prepend_zeros(str(index), 3)
@@ -374,17 +374,50 @@ def textufy_binarydisk_frame (frame, index):
     only_scanning = False
     
     sph_textufy(source_file, file_type_token, dest_path, dest_file_name, dimensions, kept_dimensions, minmaxs, testing_density, nb_logs, skip_scanning, only_scanning)
-
 def textufy_binarydisk_full_102_anim():
     start_index = 0
-    end_index = 101
+    end_index = 9#101
     diff = end_index - start_index
     print("Generating " + str(diff) + " animation frames with density data...")
     
-    i = 0
+    i = start_index
     for f in range(start_index, end_index + 1):
+        textufy_binarydisk_frame(f, i + 1)
         i = i + 1
-        textufy_binarydisk_frame(f, i)
         
     print("Generated " + str(diff + 1) + " animation frames.")
-textufy_binarydisk_full_102_anim()
+# textufy_binarydisk_full_102_anim()
+
+def textufy_fracturings_frame_xyz():
+    dimensions = [ ["x", "linear", "HQ"], ["y", "linear", "HQ"], ["z", "linear", "HQ"], ["hpart", "log", "HQ"], ["vx", "linear", "LQ"], ["vy", "linear", "LQ"], ["vz", "linear", "LQ"],  ["uint", "log", "HQ"] ]
+    
+    source_file = "./data/fracturings/1-frame/dump_0918.sham"
+    file_type_token = "SHAMROCK"
+    dest_path = "fracturings/1-frame/"
+    dest_file_name = "fracturings-xyz-0918"
+    minmaxs = [ [-1.2, 1.2], [-1.2, 1.2], [-1.2, 1.2], [-4, -1], [-0.001, 0.001], [-0.001, 0.001], [-0.001, 0.001], [-10, -6] ]
+    kept_dimensions = [1, 1, 1, 0, 0, 0, 0, 0]
+    testing_density = 1/1 # 1/1 is full rendering
+    nb_logs = 10
+    skip_scanning = True
+    only_scanning = False
+    # Scanning at 1/1 takes 40 minutes
+
+    sph_textufy(source_file, file_type_token, dest_path, dest_file_name, dimensions, kept_dimensions, minmaxs, testing_density, nb_logs, skip_scanning, only_scanning)
+# textufy_fracturings_frame_xyz()
+def textufy_fracturings_frame_xyzhvxvyvzu():
+    dimensions = [ ["x", "linear", "HQ"], ["y", "linear", "HQ"], ["z", "linear", "HQ"], ["hpart", "log", "HQ"], ["vx", "linear", "LQ"], ["vy", "linear", "LQ"], ["vz", "linear", "LQ"],  ["uint", "log", "HQ"] ]
+    
+    source_file = "./data/fracturings/1-frame/dump_0918.sham"
+    file_type_token = "SHAMROCK"
+    dest_path = "fracturings/1-frame/"
+    dest_file_name = "fracturings-xyzhvxvyvzu-0918"
+    minmaxs = [ [-1.2, 1.2], [-1.2, 1.2], [-1.2, 1.2], [-4, -1], [-0.001, 0.001], [-0.001, 0.001], [-0.001, 0.001], [-10, -6] ]
+    kept_dimensions = [1, 1, 1, 1, 1, 1, 1, 1]
+    testing_density = 1/100 # 1/1 is full rendering
+    nb_logs = 10
+    skip_scanning = True
+    only_scanning = False
+
+    sph_textufy(source_file, file_type_token, dest_path, dest_file_name, dimensions, kept_dimensions, minmaxs, testing_density, nb_logs, skip_scanning, only_scanning)
+textufy_fracturings_frame_xyzhvxvyvzu()
