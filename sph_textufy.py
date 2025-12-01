@@ -375,8 +375,8 @@ def textufy_binarydisk_frame (frame, index):
     
     sph_textufy(source_file, file_type_token, dest_path, dest_file_name, dimensions, kept_dimensions, minmaxs, testing_density, nb_logs, skip_scanning, only_scanning)
 def textufy_binarydisk_full_102_anim():
-    start_index = 0
-    end_index = 9#101
+    start_index = 10#0
+    end_index = 101
     diff = end_index - start_index
     print("Generating " + str(diff) + " animation frames with density data...")
     
@@ -386,7 +386,7 @@ def textufy_binarydisk_full_102_anim():
         i = i + 1
         
     print("Generated " + str(diff + 1) + " animation frames.")
-# textufy_binarydisk_full_102_anim()
+textufy_binarydisk_full_102_anim()
 
 def textufy_fracturings_frame_xyz():
     dimensions = [ ["x", "linear", "HQ"], ["y", "linear", "HQ"], ["z", "linear", "HQ"], ["hpart", "log", "HQ"], ["vx", "linear", "LQ"], ["vy", "linear", "LQ"], ["vz", "linear", "LQ"],  ["uint", "log", "HQ"] ]
@@ -420,4 +420,4 @@ def textufy_fracturings_frame_xyzhvxvyvzu():
     only_scanning = False
 
     sph_textufy(source_file, file_type_token, dest_path, dest_file_name, dimensions, kept_dimensions, minmaxs, testing_density, nb_logs, skip_scanning, only_scanning)
-textufy_fracturings_frame_xyzhvxvyvzu()
+# textufy_fracturings_frame_xyzhvxvyvzu()

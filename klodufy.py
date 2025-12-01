@@ -218,9 +218,7 @@ def klodufy (source_file, file_type_token, size, dimensions, minmaxs, quality, d
     destination_file = open("output/" + dest_path + dest_file_name + ".asset", "w")
     
     # Generate Unity header
-    # TEMPORARY DATA FORMAT (ADNAN-6)
-    # base_size = data.shape[0]
-    base_size = data.shape[1]
+    base_size = data.shape[0]
     base_count = base_size * base_size * base_size
     actual_count = math.floor(base_count * (testing_density ** 3))
     write_unity_header(destination_file, dest_file_name, base_size, testing_density, dimensionality, quality)
@@ -229,13 +227,9 @@ def klodufy (source_file, file_type_token, size, dimensions, minmaxs, quality, d
     start_time = datetime.datetime.now()
     
     # Compute ranges (related to testing_density)
-    #TEMPORARY DATA FORMAT (ADNAN-6 STUDY)
-    # x_range = math.floor(data.shape[0] * testing_density)
-    # y_range = math.floor(data.shape[1] * testing_density)
-    # z_range = math.floor(data.shape[2] * testing_density)
-    x_range = math.floor(data.shape[1] * testing_density)
-    y_range = math.floor(data.shape[2] * testing_density)
-    z_range = math.floor(data.shape[3] * testing_density)
+    x_range = math.floor(data.shape[0] * testing_density)
+    y_range = math.floor(data.shape[1] * testing_density)
+    z_range = math.floor(data.shape[2] * testing_density)
     step = math.floor(data.shape[1] / x_range)
     
     # LOOP 1: scan & detect extreme values
@@ -267,9 +261,7 @@ def klodufy (source_file, file_type_token, size, dimensions, minmaxs, quality, d
                         if (dimensionality == 1):
                             val = data[aa][bb][cc]
                         else:
-                            # val = data[aa][bb][cc][d]
-                            # TEMPORARY GRABBING METHOD
-                            val = data[d+3][aa][bb][cc]
+                            val = data[aa][bb][cc][d]
                         
                         if (dimension_mode == "log"):
                             val = math.log10(val)
@@ -331,9 +323,7 @@ def klodufy (source_file, file_type_token, size, dimensions, minmaxs, quality, d
                     if (dimensionality == 1):
                         val = data[aa][bb][cc]
                     else:
-                        # val = data[aa][bb][cc][d]
-                        # TEMPORARY GRABBING METHOD
-                        val = data[d+3][aa][bb][cc]
+                        val = data[aa][bb][cc][d]
                     
                     # Checking mode
                     if (dimension_mode == "log"):
@@ -1138,8 +1128,8 @@ def klodufy_youngdisk_frame (frame, index):
     
     klodufy (source_file, file_type_token, size, dimensions, minmaxs, quality, dest_path, dest_file_name, testing_density, nb_logs, skip_scanning)
 def klodufy_youngdisk_full_anim():
-    start_index = 1858
-    end_index = 1922
+    start_index = 460
+    end_index = 460
     diff = end_index - start_index
     print("Generating " + str(diff) + " animation frames with density data...")
     
@@ -1149,25 +1139,4 @@ def klodufy_youngdisk_full_anim():
         klodufy_youngdisk_frame(f, i)
         
     print("Generated " + str(diff + 1) + " animation frames.")
-# klodufy_youngdisk_full_anim()
-
-def klodufy_youngdisk_6_dimensions_456():
-    source_file = "./data/youngdisk/1-frame-study/alex_all_stacks_01400.npy"
-    file_type_token = "NUMPY"
-    size = 137
-    
-    # dimensions = [ ["rho_stack", "log"], ["rho_vr2", "log"] , ["p_mag", "log"] ]
-    # minmaxs = [ [-18.5, -10.5], [-16.5, 0], [-7, -3] ]
-    
-    dimensions = [ ["b_stack", "log"] , ["beta_stack", "log"] , ["p_stack", "log"] ]
-    minmaxs = [ [-3, -1], [-4, 4], [-9, 0] ]
-    
-    quality = "high"
-    dest_path = "youngdisk/1-frame-study/"
-    dest_file_name = "klo-youngdisk-137-study" + "-456"
-    testing_density = 1/1
-    nb_logs = 3
-    skip_scanning = False
-    
-    klodufy (source_file, file_type_token, size, dimensions, minmaxs, quality, dest_path, dest_file_name, testing_density, nb_logs, skip_scanning)
-klodufy_youngdisk_6_dimensions_456()
+klodufy_youngdisk_full_anim()
