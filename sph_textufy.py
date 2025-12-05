@@ -386,7 +386,7 @@ def textufy_binarydisk_full_102_anim():
         i = i + 1
         
     print("Generated " + str(diff + 1) + " animation frames.")
-textufy_binarydisk_full_102_anim()
+# textufy_binarydisk_full_102_anim()
 
 def textufy_fracturings_frame_xyz():
     dimensions = [ ["x", "linear", "HQ"], ["y", "linear", "HQ"], ["z", "linear", "HQ"], ["hpart", "log", "HQ"], ["vx", "linear", "LQ"], ["vy", "linear", "LQ"], ["vz", "linear", "LQ"],  ["uint", "log", "HQ"] ]
@@ -394,13 +394,13 @@ def textufy_fracturings_frame_xyz():
     source_file = "./data/fracturings/1-frame/dump_0918.sham"
     file_type_token = "SHAMROCK"
     dest_path = "fracturings/1-frame/"
-    dest_file_name = "fracturings-xyz-0918"
+    dest_file_name = "fracturings-xyz-0918-test"
     minmaxs = [ [-1.2, 1.2], [-1.2, 1.2], [-1.2, 1.2], [-4, -1], [-0.001, 0.001], [-0.001, 0.001], [-0.001, 0.001], [-10, -6] ]
     kept_dimensions = [1, 1, 1, 0, 0, 0, 0, 0]
-    testing_density = 1/1 # 1/1 is full rendering
-    nb_logs = 10
-    skip_scanning = True
-    only_scanning = False
+    testing_density = 1/20 # 1/1 is full rendering
+    nb_logs = 15
+    skip_scanning = False
+    only_scanning = True
     # Scanning at 1/1 takes 40 minutes
 
     sph_textufy(source_file, file_type_token, dest_path, dest_file_name, dimensions, kept_dimensions, minmaxs, testing_density, nb_logs, skip_scanning, only_scanning)
